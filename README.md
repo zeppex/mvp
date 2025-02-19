@@ -1,0 +1,2 @@
+# mvp
+Zeppex MVP monorepo
