@@ -6,6 +6,7 @@ import { ExchangeGwModule } from './exchange-gw/exchange-gw.module';
 import { BinanceClientModule } from './binance-client/binance-client.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ConfigModule } from '@nestjs/config';
     BinanceClientModule,
     CqrsModule.forRoot(),
     ConfigModule.forRoot(),
+    SharedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
