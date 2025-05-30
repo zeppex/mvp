@@ -13,7 +13,6 @@ export const ApiIncludesProperty = (metadata: Metadata) => {
   return applyDecorators(
     IsOptional(),
     ApiPropertyOptional(),
-    ApiArrayProperty(metadata),
     IsIn(Object.values(metadata.type), { each: true }),
   );
 };

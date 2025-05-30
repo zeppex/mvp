@@ -6,41 +6,41 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydb
+      POSTGRES_DB: zeppex
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    container_name: zeppex_backend_service
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: postgres://user:password@postgres:5432/mydb
-      NODE_ENV: development
-    volumes:
-      - ./apps/backend:/app/apps/backend
-      - /app/apps/backend/node_modules
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/backend/Dockerfile
+  #   container_name: zeppex_backend_service
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     DATABASE_URL: postgres://user:password@postgres:5432/mydb
+  #     NODE_ENV: development
+  #   volumes:
+  #     - ./apps/backend:/app/apps/backend
+  #     - /app/apps/backend/node_modules
 
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-    container_name: zeppex_frontend_service
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    volumes:
-      - ./apps/frontend:/app/apps/frontend
-      - /app/apps/frontend/node_modules
-      - /app/apps/frontend/.next
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/frontend/Dockerfile
+  #   container_name: zeppex_frontend_service
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   volumes:
+  #     - ./apps/frontend:/app/apps/frontend
+  #     - /app/apps/frontend/node_modules
+  #     - /app/apps/frontend/.next
 
 volumes:
   postgres_data:
