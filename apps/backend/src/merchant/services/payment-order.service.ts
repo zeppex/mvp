@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentOrder } from './payment-order.entity';
-import { CreatePaymentOrderDto } from './dto';
+import { PaymentOrder } from '../entities/payment-order.entity';
+import { CreatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
 import { PosService } from './pos.service';
 import { UUID } from 'crypto';

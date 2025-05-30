@@ -1,7 +1,15 @@
-import { Controller, Get, Post, Param, Body, Delete, ParseUUIDPipe } from '@nestjs/common';
-import { BranchService } from './branch.service';
-import { CreateBranchDto } from './dto';
-import { Branch } from './branch.entity';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Delete,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { BranchService } from '../services/branch.service';
+import { CreateBranchDto } from '../dto';
+import { Branch } from '../entities/branch.entity';
 import {
   ApiTags,
   ApiOperation,

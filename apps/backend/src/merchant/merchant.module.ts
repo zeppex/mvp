@@ -1,20 +1,19 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MerchantService } from './merchant.service';
-import { MerchantController } from './merchant.controller';
-import { Merchant } from './merchant.entity';
-import { Branch } from './branch.entity';
-import { Pos } from './pos.entity';
-import { BranchService } from './branch.service';
-import { BranchController } from './branch.controller';
-import { PosService } from './pos.service';
-import { PosController } from './pos.controller';
+import { MerchantService } from './services/merchant.service';
+import { MerchantController } from './controllers/merchant.controller';
+import { Merchant } from './entities/merchant.entity';
+import { Branch } from './entities/branch.entity';
+import { Pos } from './entities/pos.entity';
+import { BranchService } from './services/branch.service';
+import { BranchController } from './controllers/branch.controller';
+import { PosService } from './services/pos.service';
+import { PosController } from './controllers/pos.controller';
 import { BinanceClientModule } from '../binance-client/binance-client.module';
-import { MerchantSubscriber } from './merchant.subscriber';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Merchant, Branch, Pos]), BinanceClientModule],
-  providers: [MerchantService, BranchService, PosService, MerchantSubscriber],
+  providers: [MerchantService, BranchService, PosService],
   controllers: [MerchantController, BranchController, PosController],
   exports: [MerchantService, BranchService, PosService],
 })

@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryColumn, BeforeInsert, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  BeforeInsert,
+  OneToMany,
+} from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
 import { Branch } from './branch.entity';
 
@@ -25,7 +31,7 @@ export class Merchant {
   @Column({ nullable: true })
   binanceId: string;
 
-  @OneToMany(() => Branch, branch => branch.merchant, { cascade: true })
+  @OneToMany(() => Branch, (branch) => branch.merchant, { cascade: true })
   branches: Branch[];
 
   @BeforeInsert()

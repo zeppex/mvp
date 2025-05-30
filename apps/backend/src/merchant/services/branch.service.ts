@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Branch } from './branch.entity';
-import { CreateBranchDto } from './dto';
-import { MerchantService } from './merchant.service';
+import { Branch } from '../entities/branch.entity';
+import { CreateBranchDto } from '../dto';
 import { UUID } from 'crypto';
+import { MerchantService } from './merchant.service';
 
 @Injectable()
 export class BranchService {

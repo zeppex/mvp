@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Pos } from './pos.entity';
-import { CreatePosDto } from './dto';
+import { Pos } from '../entities/pos.entity';
+import { CreatePosDto } from '../dto';
 import { BranchService } from './branch.service';
 import { UUID } from 'crypto';
 

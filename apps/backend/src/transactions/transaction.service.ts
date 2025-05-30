@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction } from './transaction.entity';
 import { CreateTransactionDto } from './dto';
-import { MerchantService } from '../merchant/merchant.service';
-import { BranchService } from '../merchant/branch.service';
-import { PosService } from '../merchant/pos.service';
+import { MerchantService } from '../merchant/services/merchant.service';
+import { BranchService } from '../merchant/services/branch.service';
+import { PosService } from '../merchant/services/pos.service';
 
 @Injectable()
 export class TransactionService {

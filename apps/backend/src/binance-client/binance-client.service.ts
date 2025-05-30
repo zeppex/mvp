@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { UUID } from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 
 @Injectable()
 export class BinanceClientService {
-  async createSubMerchant(merchantId: string): Promise<string> {
-    // TODO: integrate with Binance Pay API to register sub-merchant
-    return uuidv7();
+    private readonly logger = new Logger(BinanceClientService.name);
+  async createSubMerchant(merchantId: string): Promise<UUID> {
+    const subMerchantId = uuidv7();
+    this.logger.log(`Creating Binance sub-merchant for merchant ${merchantId} with ID ${subMerchantId}`);
+    Promise.resolve(subMerchantId); 
+    return subMerchantId as UUID;
   }
 }

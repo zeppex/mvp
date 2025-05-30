@@ -6,10 +6,10 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
-import { Merchant } from '../merchant/merchant.entity';
-import { Branch } from '../merchant/branch.entity';
-import { Pos } from '../merchant/pos.entity';
-import { PaymentOrder } from '../merchant/payment-order.entity';
+import { Merchant } from '../merchant/entities/merchant.entity';
+import { Branch } from '../merchant/entities/branch.entity';
+import { Pos } from '../merchant/entities/pos.entity';
+import { PaymentOrder } from '../merchant/entities/payment-order.entity';
 
 @Entity('transactions')
 export class Transaction {

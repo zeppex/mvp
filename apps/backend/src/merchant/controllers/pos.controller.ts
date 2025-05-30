@@ -7,9 +7,9 @@ import {
   Delete,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { PosService } from './pos.service';
-import { CreatePosDto } from './dto';
-import { Pos } from './pos.entity';
+import { PosService } from '../services/pos.service';
+import { CreatePosDto } from '../dto';
+import { Pos } from '../entities/pos.entity';
 import {
   ApiTags,
   ApiOperation,
@@ -26,10 +26,22 @@ export class PosController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new POS for a branch' })
-  @ApiParam({ name: 'merchantId', description: 'ID of the merchant', type: 'string' })
-  @ApiParam({ name: 'branchId', description: 'ID of the branch', type: 'string' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
   @ApiBody({ type: CreatePosDto })
-  @ApiResponse({ status: 201, description: 'POS successfully created.', type: Pos })
+  @ApiResponse({
+    status: 201,
+    description: 'POS successfully created.',
+    type: Pos,
+  })
   create(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
@@ -40,8 +52,16 @@ export class PosController {
 
   @Get()
   @ApiOperation({ summary: 'Retrieve all POS for a branch' })
-  @ApiParam({ name: 'merchantId', description: 'ID of the merchant', type: 'string' })
-  @ApiParam({ name: 'branchId', description: 'ID of the branch', type: 'string' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
   @ApiResponse({ status: 200, description: 'Return all POS.', type: [Pos] })
   findAll(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
@@ -52,8 +72,16 @@ export class PosController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Retrieve a POS by ID for a branch' })
-  @ApiParam({ name: 'merchantId', description: 'ID of the merchant', type: 'string' })
-  @ApiParam({ name: 'branchId', description: 'ID of the branch', type: 'string' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
   @ApiResponse({ status: 200, description: 'Return the POS.', type: Pos })
   @ApiResponse({ status: 404, description: 'POS not found.' })
@@ -67,8 +95,16 @@ export class PosController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a POS by ID for a branch' })
-  @ApiParam({ name: 'merchantId', description: 'ID of the merchant', type: 'string' })
-  @ApiParam({ name: 'branchId', description: 'ID of the branch', type: 'string' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
   @ApiResponse({ status: 204, description: 'POS successfully deleted.' })
   @ApiResponse({ status: 404, description: 'POS not found.' })

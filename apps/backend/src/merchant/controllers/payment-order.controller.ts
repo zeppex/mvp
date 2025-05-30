@@ -7,9 +7,9 @@ import {
   Delete,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { PaymentOrderService } from './payment-order.service';
-import { CreatePaymentOrderDto } from './dto';
-import { PaymentOrder } from './payment-order.entity';
+import { PaymentOrderService } from '../services/payment-order.service';
+import { CreatePaymentOrderDto } from '../dto';
+import { PaymentOrder } from '../entities/payment-order.entity';
 import {
   ApiTags,
   ApiOperation,

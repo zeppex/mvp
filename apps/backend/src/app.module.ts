@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ZeppexCoreModule } from './zeppex-core/zeppex-core.module';
 import { ExchangeGwModule } from './exchange-gw/exchange-gw.module';
 import { BinanceClientModule } from './binance-client/binance-client.module';
 import { SharedModule } from './shared/shared.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantModule } from './merchant/merchant.module';
-import { TransactionModule } from './transactions/transaction.module';
 import { PaymentOrderModule } from './merchant/payment-order.module';
+import { TransactionModule } from './transactions/transaction.module';
 
 
 @Module({
@@ -25,7 +24,6 @@ import { PaymentOrderModule } from './merchant/payment-order.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
-    ZeppexCoreModule,
     ExchangeGwModule,
     BinanceClientModule,
     SharedModule,

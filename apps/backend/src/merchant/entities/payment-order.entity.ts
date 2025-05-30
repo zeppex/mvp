@@ -9,7 +9,7 @@ import {
 import { v7 as uuidv7 } from 'uuid';
 import { Branch } from './branch.entity';
 import { Pos } from './pos.entity';
-import { Transaction } from '../transactions/transaction.entity';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 @Entity('payment_orders')
 export class PaymentOrder {
