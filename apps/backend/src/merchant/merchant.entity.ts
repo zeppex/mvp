@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryColumn, BeforeInsert } from 'typeorm';
+import { Entity, Column, PrimaryColumn, BeforeInsert, OneToMany } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
+import { Branch } from './branch.entity';
 
 @Entity('merchants')
 export class Merchant {
@@ -14,7 +15,16 @@ export class Merchant {
 
   @Column()
   contact: string;
-  
+
+  @Column()
+  contactName: string;
+
+  @Column()
+  contactPhone: string;
+
+  @OneToMany(() => Branch, branch => branch.merchant, { cascade: true })
+  branches: Branch[];
+
   @BeforeInsert()
   generateId() {
     this.id = uuidv7();

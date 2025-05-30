@@ -13,4 +13,12 @@ export class CreateMerchantDto {
   @ApiProperty({ example: 'contact@acme.com', description: 'Contact email of the merchant' })
   @IsString()
   contact: string;
+
+  @ApiProperty({ example: 'John Doe', description: 'Primary contact person name' })
+  @IsString()
+  contactName: string;
+
+  @ApiProperty({ example: '+1234567890', description: 'Primary contact phone number' })
+  @IsString()
+  contactPhone: string;
 }
