@@ -42,4 +42,12 @@ export class MerchantController {
   remove(@Param('id', new ParseUUIDPipe()) id: UUID,): Promise<void> {
     return this.merchantService.remove(id);
   }
+
+  @Post(':id/binance-submerchant')
+  @ApiOperation({ summary: 'Create Binance Pay sub-merchant for a merchant' })
+  @ApiParam({ name: 'id', required: true, description: 'Merchant ID', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Sub-merchant ID created and merchant updated.', type: Merchant })
+  createBinanceSubMerchant(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Merchant> {
+    return this.merchantService.createBinanceSubMerchant(id);
+  }
 }

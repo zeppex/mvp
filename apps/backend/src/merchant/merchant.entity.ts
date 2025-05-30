@@ -22,6 +22,9 @@ export class Merchant {
   @Column()
   contactPhone: string;
 
+  @Column({ nullable: true })
+  binanceId: string;
+
   @OneToMany(() => Branch, branch => branch.merchant, { cascade: true })
   branches: Branch[];
 

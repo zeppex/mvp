@@ -8,6 +8,7 @@ import { SharedModule } from './shared/shared.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantModule } from './merchant/merchant.module';
+import { TransactionModule } from './transactions/transaction.module';
 
 
 @Module({
@@ -28,6 +29,7 @@ import { MerchantModule } from './merchant/merchant.module';
     BinanceClientModule,
     SharedModule,
     MerchantModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

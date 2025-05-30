@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Merchant } from './merchant.entity';
 import { CreateMerchantDto } from './dto';
 import { UUID } from 'crypto';
+import { BinanceClientService } from '../binance-client/binance-client.service';
 
 @Injectable()
 export class MerchantService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepository: Repository<Merchant>,
+    private readonly binanceClient: BinanceClientService,
   ) {}
 
   async create(createMerchantDto: CreateMerchantDto): Promise<Merchant> {
@@ -31,5 +33,14 @@ export class MerchantService {
     const result = await this.merchantRepository.delete(id);
     if (result.affected === 0)
       throw new NotFoundException(`Merchant ${id} not found`);
+  }
+
+  async createBinanceSubMerchant(id: UUID): Promise<Merchant> {
+    // ensure merchant exists
+    const merchant = await this.findOne(id);
+    // create Binance Pay sub-merchant
+    const subId = await this.binanceClient.createSubMerchant(merchant.id);
+    merchant.binanceId = subId;
+    return this.merchantRepository.save(merchant);
   }
 }
