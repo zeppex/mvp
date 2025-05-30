@@ -9,6 +9,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { Merchant } from '../merchant/merchant.entity';
 import { Branch } from '../merchant/branch.entity';
 import { Pos } from '../merchant/pos.entity';
+import { PaymentOrder } from '../merchant/payment-order.entity';
 
 @Entity('transactions')
 export class Transaction {
@@ -41,6 +42,14 @@ export class Transaction {
 
   @Column('uuid')
   posId: string;
+
+  @ManyToOne(() => PaymentOrder, (order) => order.transactions, {
+    nullable: true,
+  })
+  paymentOrder: PaymentOrder;
+
+  @Column('uuid', { nullable: true })
+  paymentOrderId: string;
 
   @Column('decimal', { precision: 18, scale: 8 })
   amount: string;
