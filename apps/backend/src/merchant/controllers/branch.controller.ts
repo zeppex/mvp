@@ -20,7 +20,7 @@ import {
 import { UUID } from 'crypto';
 
 @ApiTags('branches')
-@Controller('merchants/:merchantId/branches')
+@Controller('/branches')
 export class BranchController {
   constructor(private readonly branchService: BranchService) {}
 
@@ -73,10 +73,9 @@ export class BranchController {
   @ApiResponse({ status: 200, description: 'Return the branch.', type: Branch })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
   findOne(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
   ): Promise<Branch> {
-    return this.branchService.findOne(merchantId, id);
+    return this.branchService.findOne(id);
   }
 
   @Delete(':id')
@@ -90,9 +89,8 @@ export class BranchController {
   @ApiResponse({ status: 204, description: 'Branch successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
   remove(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
   ): Promise<void> {
-    return this.branchService.remove(merchantId, id);
+    return this.branchService.remove(id);
   }
 }

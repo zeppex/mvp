@@ -6,6 +6,7 @@ import { CreatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
 import { PosService } from './pos.service';
 import { UUID } from 'crypto';
+import { PaymentOrderStatus } from 'src/shared/enums/payment-order-status.enum';
 
 @Injectable()
 export class PaymentOrderService {
@@ -22,14 +23,16 @@ export class PaymentOrderService {
     posId: UUID,
     createDto: CreatePaymentOrderDto,
   ): Promise<PaymentOrder> {
-    // validate branch and pos hierarchy
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);
-    const order = this.orderRepository.create({
-      ...createDto,
-      branchId,
-      posId,
-    });
+
+    const order = new PaymentOrder();
+    order.amount = createDto.amount;
+    order.description = createDto.description;
+    order.branchId = branchId;
+    order.posId = posId;
+    order.status = createDto.status ?? PaymentOrderStatus.ACTIVE;
+
     return this.orderRepository.save(order);
   }
 
@@ -67,5 +70,32 @@ export class PaymentOrderService {
     const result = await this.orderRepository.delete({ id, posId });
     if (result.affected === 0)
       throw new NotFoundException(`PaymentOrder ${id} not found`);
+  }
+
+  async getCurrent(
+    merchantId: UUID,
+    branchId: UUID,
+    posId: UUID,
+  ): Promise<PaymentOrder> {
+    await this.branchService.findOne(merchantId, branchId);
+    await this.posService.findOne(merchantId, branchId, posId);
+
+    const order = await this.orderRepository.findOne({
+      where: { posId },
+      order: { createdAt: 'DESC' },
+    });
+    if (!order || order.status !== PaymentOrderStatus.ACTIVE) {
+      throw new NotFoundException(`No active order for pos: ${posId}`);
+    }
+
+    const now = new Date();
+    const ageMs = now.getTime() - order.createdAt.getTime();
+    if (ageMs > 2 * 60 * 1000) {
+      order.status = PaymentOrderStatus.EXPIRED;
+      await this.orderRepository.save(order);
+      throw new NotFoundException(`No active order for pos: ${posId}`);
+    }
+
+    return order;
   }
 }

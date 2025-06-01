@@ -1,13 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Merchant } from '../entities/merchant.entity';
 import { CreateMerchantDto } from '../dto';
 import { UUID } from 'crypto';
 import { BinanceClientService } from '../../binance-client/binance-client.service';
+import { getCorrelationId } from '../../shared/middleware/correlation-id.storage';
 
 @Injectable()
 export class MerchantService {
+  private readonly logger = new Logger(MerchantService.name);
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepository: Repository<Merchant>,
@@ -15,8 +17,13 @@ export class MerchantService {
   ) {}
 
   async create(createMerchantDto: CreateMerchantDto): Promise<Merchant> {
-    const merchant = this.merchantRepository.create(createMerchantDto);
-    return this.merchantRepository.save(merchant);
+    const merchant = await this.merchantRepository.create(createMerchantDto);
+    const savedMerchant = await this.merchantRepository.save(merchant);
+
+    this.logger.log(
+      `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id}`,
+    );
+    return savedMerchant;
   }
 
   async findAll(): Promise<Merchant[]> {

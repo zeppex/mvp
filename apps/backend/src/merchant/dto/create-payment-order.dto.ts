@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsDecimal } from 'class-validator';
+import { IsString, IsDecimal, IsEnum, IsOptional } from 'class-validator';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
 export class CreatePaymentOrderDto {
   @ApiProperty({ example: '100.00', description: 'Order amount' })
@@ -13,7 +14,12 @@ export class CreatePaymentOrderDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ example: 'PENDING', description: 'Order status' })
-  @IsString()
-  status: string;
+  @ApiProperty({
+    example: PaymentOrderStatus.PENDING,
+    enum: PaymentOrderStatus,
+    description: 'Order status',
+  })
+  @IsEnum(PaymentOrderStatus)
+  @IsOptional()
+  status?: PaymentOrderStatus;
 }

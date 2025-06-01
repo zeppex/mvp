@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantService } from './services/merchant.service';
 import { MerchantController } from './controllers/merchant.controller';
@@ -10,9 +10,14 @@ import { BranchController } from './controllers/branch.controller';
 import { PosService } from './services/pos.service';
 import { PosController } from './controllers/pos.controller';
 import { BinanceClientModule } from '../binance-client/binance-client.module';
+import { PaymentOrderModule } from './payment-order.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Merchant, Branch, Pos]), BinanceClientModule],
+  imports: [
+    TypeOrmModule.forFeature([Merchant, Branch, Pos]),
+    BinanceClientModule,
+    forwardRef(() => PaymentOrderModule),
+  ],
   providers: [MerchantService, BranchService, PosService],
   controllers: [MerchantController, BranchController, PosController],
   exports: [MerchantService, BranchService, PosService],

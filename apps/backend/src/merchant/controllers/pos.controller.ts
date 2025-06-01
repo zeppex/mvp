@@ -18,11 +18,16 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { UUID } from 'crypto';
+import { PaymentOrderService } from '../services/payment-order.service';
+import { PaymentOrder } from '../entities/payment-order.entity';
 
 @ApiTags('pos')
-@Controller('merchants/:merchantId/branches/:branchId/pos')
+@Controller('branches/:branchId/')
 export class PosController {
-  constructor(private readonly posService: PosService) {}
+  constructor(
+    private readonly posService: PosService,
+    private readonly paymentOrderService: PaymentOrderService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new POS for a branch' })
@@ -114,5 +119,32 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
   ): Promise<void> {
     return this.posService.remove(merchantId, branchId, id);
+  }
+
+  @Get(':id/paymentorder')
+  @ApiOperation({ summary: 'Get current payment order for a POS' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return current active payment order',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 404, description: 'No active order for pos' })
+  getCurrentPaymentOrder(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('id', new ParseUUIDPipe()) posId: UUID,
+  ): Promise<PaymentOrder> {
+    return this.paymentOrderService.getCurrent(merchantId, branchId, posId);
   }
 }

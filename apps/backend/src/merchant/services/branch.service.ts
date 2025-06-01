@@ -31,22 +31,22 @@ export class BranchService {
     return this.branchRepository.find({ where: { merchantId } });
   }
 
-  async findOne(merchantId: string, id: string): Promise<Branch> {
+  async findOne(id: string): Promise<Branch> {
     const branch = await this.branchRepository.findOne({
-      where: { id, merchantId },
+      where: { id },
     });
     if (!branch)
       throw new NotFoundException(
-        `Branch ${id} not found for merchant ${merchantId}`,
+        `Branch ${id} not found`,
       );
     return branch;
   }
 
-  async remove(merchantId: string, id: string): Promise<void> {
-    const result = await this.branchRepository.delete({ id, merchantId });
+  async remove(id: string): Promise<void> {
+    const result = await this.branchRepository.delete({ id });
     if (result.affected === 0)
       throw new NotFoundException(
-        `Branch ${id} not found for merchant ${merchantId}`,
+        `Branch ${id} not found`,
       );
   }
 }
