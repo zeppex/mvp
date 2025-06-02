@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction } from './transaction.entity';
@@ -6,6 +10,7 @@ import { CreateTransactionDto } from './dto';
 import { MerchantService } from '../merchant/services/merchant.service';
 import { BranchService } from '../merchant/services/branch.service';
 import { PosService } from '../merchant/services/pos.service';
+import { UUID } from '../shared/types/uuid';
 
 @Injectable()
 export class TransactionService {
@@ -17,36 +22,80 @@ export class TransactionService {
     private readonly posService: PosService,
   ) {}
 
-  async create(dto: CreateTransactionDto): Promise<Transaction> {
+  async create(
+    dto: CreateTransactionDto,
+    tenantId?: UUID,
+  ): Promise<Transaction> {
     const { merchantId, branchId, posId, ...rest } = dto;
-    await this.merchantService.findOne(merchantId);
+
+    // Get the merchant to check tenant access
+    const merchant = await this.merchantService.findOne(merchantId);
+
+    // If tenantId is provided, verify access
+    if (tenantId && merchant.tenantId !== tenantId) {
+      throw new ForbiddenException('You do not have access to this merchant');
+    }
+
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);
+
     const transaction = this.transactionRepository.create({
       ...rest,
       merchantId,
       branchId,
       posId,
+      // Set the tenant ID from the merchant
+      tenantId: merchant.tenantId,
     });
+
     return this.transactionRepository.save(transaction);
   }
 
-  async findAll(): Promise<Transaction[]> {
-    return this.transactionRepository.find();
+  async findAll(tenantId?: UUID): Promise<Transaction[]> {
+    // If a tenantId is provided, only return transactions for that tenant
+    if (tenantId) {
+      return this.transactionRepository.find({
+        where: { tenantId },
+        relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
+      });
+    }
+
+    // Otherwise return all transactions (admin access)
+    return this.transactionRepository.find({
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
+    });
   }
 
-  async findOne(id: string): Promise<Transaction> {
+  async findOne(id: UUID, tenantId?: UUID): Promise<Transaction> {
+    // Create the where condition based on whether tenantId is provided
+    const where = tenantId ? { id, tenantId } : { id };
+
     const transaction = await this.transactionRepository.findOne({
-      where: { id },
+      where,
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
     });
-    if (!transaction)
+
+    if (!transaction) {
       throw new NotFoundException(`Transaction ${id} not found`);
+    }
+
     return transaction;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: UUID, tenantId?: UUID): Promise<void> {
+    // If tenantId is provided, verify the transaction belongs to that tenant
+    if (tenantId) {
+      const transaction = await this.findOne(id, tenantId);
+      if (transaction.tenantId !== tenantId) {
+        throw new ForbiddenException(
+          'You do not have access to this transaction',
+        );
+      }
+    }
+
     const result = await this.transactionRepository.delete(id);
-    if (result.affected === 0)
+    if (result.affected === 0) {
       throw new NotFoundException(`Transaction ${id} not found`);
+    }
   }
 }

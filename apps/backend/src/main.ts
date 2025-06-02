@@ -9,6 +9,10 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Zeppex Core API')
     .setDescription('Zeppex Core API MVP documentation')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'JWT access-token',
+    )
     .setVersion('0.1')
     .build();
   const document = SwaggerModule.createDocument(app, config);

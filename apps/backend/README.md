@@ -1,75 +1,389 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Zeppex Core API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A multi-tenant backend application built with NestJS for managing merchants, branches, points of sale, and payments.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Table of Contents
 
-## Description
+- [Overview](#overview)
+- [Multi-Tenant Architecture](#multi-tenant-architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+- [Authentication](#authentication)
+  - [Admin User Configuration](#admin-user-configuration)
+  - [User Roles](#user-roles)
+- [API Usage](#api-usage)
+  - [Creating and Managing Tenants](#creating-and-managing-tenants)
+  - [Managing Merchants](#managing-merchants)
+  - [Managing Branches](#managing-branches)
+  - [Managing POS (Points of Sale)](#managing-pos-points-of-sale)
+  - [Payment Orders and Transactions](#payment-orders-and-transactions)
+- [Development](#development)
+  - [Running the Application](#running-the-application)
+  - [Testing](#testing)
+- [Deployment](#deployment)
+- [API Documentation](#api-documentation)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Overview
 
-## Project setup
+Zeppex Core API is a multi-tenant backend system designed to manage merchants, branches, points of sale, and payment transactions. The system is built with data isolation in mind, ensuring that each tenant can only access their own data.
+
+## Multi-Tenant Architecture
+
+The system uses a multi-tenant architecture with the following features:
+- An admin side can create and manage tenants
+- Each tenant can only view and manage their own data
+- Authentication and authorization are tenant-aware
+
+For more detailed information about the multi-tenant architecture, see [Multi-Tenant Architecture Documentation](docs/multi-tenant-architecture.md).
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- PNPM package manager
+- PostgreSQL database
+
+### Installation
+
+1. Clone the repository:
 
 ```bash
-$ npm install
+git clone https://github.com/your-organization/zeppex.git
+cd zeppex/apps/backend
 ```
 
-## Compile and run the project
+2. Install dependencies:
+
+```bash
+pnpm install
+```
+
+3. Set up environment variables:
+
+```bash
+cp .env.example .env
+```
+
+4. Edit the `.env` file with your configuration values.
+
+5. Start the application:
+
+```bash
+pnpm start:dev
+```
+
+### Environment Variables
+
+Important environment variables to configure:
+
+```
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=user
+DB_PASS=password
+DB_NAME=zeppex
+
+# JWT Configuration
+JWT_SECRET=your-secret-key-here
+
+# Server Configuration
+PORT=4000
+
+# Admin User Configuration
+ADMIN_TENANT_NAME=admin
+ADMIN_TENANT_DISPLAY_NAME=System Administrator
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=strong-password-here
+ADMIN_FIRST_NAME=Admin
+ADMIN_LAST_NAME=User
+```
+
+## Authentication
+
+### Admin User Configuration
+
+The system includes a default admin user for initial access. You can configure this admin user through environment variables:
+
+```
+ADMIN_TENANT_NAME=admin
+ADMIN_TENANT_DISPLAY_NAME=System Administrator
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=strong-password-here
+ADMIN_FIRST_NAME=Admin
+ADMIN_LAST_NAME=User
+```
+
+If you don't set these variables, default values will be used. There's also a hardcoded fallback admin created if the configurable admin fails:
+
+- Email: superadmin@zeppex.com
+- Password: SuperAdmin!123
+
+### User Roles
+
+The system has the following user roles:
+
+- **ADMIN**: System-wide administrator with full access to all tenants and features
+- **TENANT_ADMIN**: Administrator for a specific tenant with full access to that tenant's data
+- **MERCHANT_ADMIN**: Administrator for a specific merchant within a tenant
+- **BRANCH_ADMIN**: Administrator for a specific branch
+- **POS_OPERATOR**: Operator for a specific point of sale
+
+## API Usage
+
+### Creating and Managing Tenants
+
+Only system administrators (ADMIN role) can create and manage tenants.
+
+#### Creating a Tenant
+
+```http
+POST /api/v1/admin/tenants
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+
+{
+  "name": "tenant-name",
+  "displayName": "Tenant Display Name",
+  "isActive": true
+}
+```
+
+#### Listing All Tenants
+
+```http
+GET /api/v1/admin/tenants
+Authorization: Bearer <admin-jwt-token>
+```
+
+#### Getting a Single Tenant
+
+```http
+GET /api/v1/admin/tenants/:id
+Authorization: Bearer <admin-jwt-token>
+```
+
+#### Updating a Tenant
+
+```http
+PUT /api/v1/admin/tenants/:id
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+
+{
+  "displayName": "Updated Tenant Name",
+  "isActive": true
+}
+```
+
+#### Deleting a Tenant
+
+```http
+DELETE /api/v1/admin/tenants/:id
+Authorization: Bearer <admin-jwt-token>
+```
+
+### Managing Merchants
+
+Merchants are created within a tenant. ADMIN and TENANT_ADMIN roles can create and manage merchants.
+
+#### Creating a Merchant
+
+```http
+POST /api/v1/merchants
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "name": "Merchant Name",
+  "address": "123 Main St, City",
+  "contact": "contact@merchant.com",
+  "contactName": "John Doe",
+  "contactPhone": "+1234567890"
+}
+```
+
+The tenant ID is automatically determined from the JWT token.
+
+#### Listing Merchants
+
+```http
+GET /api/v1/merchants
+Authorization: Bearer <jwt-token>
+```
+
+This endpoint returns only the merchants belonging to the tenant specified in the JWT token.
+
+#### Getting a Single Merchant
+
+```http
+GET /api/v1/merchants/:id
+Authorization: Bearer <jwt-token>
+```
+
+### Managing Branches
+
+Branches are created within a merchant. ADMIN, TENANT_ADMIN, and MERCHANT_ADMIN roles can create and manage branches.
+
+#### Creating a Branch
+
+```http
+POST /api/v1/merchants/:merchantId/branches
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "name": "Branch Name",
+  "address": "456 Branch St, City",
+  "contactName": "Jane Smith",
+  "contactPhone": "+1234567890"
+}
+```
+
+#### Listing Branches for a Merchant
+
+```http
+GET /api/v1/merchants/:merchantId/branches
+Authorization: Bearer <jwt-token>
+```
+
+#### Getting a Single Branch
+
+```http
+GET /api/v1/merchants/:merchantId/branches/:branchId
+Authorization: Bearer <jwt-token>
+```
+
+### Managing POS (Points of Sale)
+
+POS terminals are created within a branch. ADMIN, TENANT_ADMIN, MERCHANT_ADMIN, and BRANCH_ADMIN roles can create and manage POS terminals.
+
+#### Creating a POS Terminal
+
+```http
+POST /api/v1/merchants/:merchantId/branches/:branchId/pos
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "name": "POS Terminal 1",
+  "description": "Front counter terminal"
+}
+```
+
+#### Listing POS Terminals for a Branch
+
+```http
+GET /api/v1/merchants/:merchantId/branches/:branchId/pos
+Authorization: Bearer <jwt-token>
+```
+
+#### Getting a Single POS Terminal
+
+```http
+GET /api/v1/merchants/:merchantId/branches/:branchId/pos/:posId
+Authorization: Bearer <jwt-token>
+```
+
+### Payment Orders and Transactions
+
+Payment orders are created at a specific POS terminal and can lead to transactions.
+
+#### Creating a Payment Order
+
+```http
+POST /api/v1/merchants/:merchantId/branches/:branchId/pos/:posId/payment-orders
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "amount": 100.50,
+  "currency": "USD",
+  "description": "Payment for order #12345"
+}
+```
+
+#### Creating a Transaction
+
+```http
+POST /api/v1/transactions
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "merchantId": "uuid-of-merchant",
+  "branchId": "uuid-of-branch",
+  "posId": "uuid-of-pos",
+  "paymentOrderId": "uuid-of-payment-order",
+  "status": "completed",
+  "amount": 100.50,
+  "currency": "USD"
+}
+```
+
+## Development
+
+### Running the Application
 
 ```bash
 # development
-$ npm run start
+pnpm start
 
 # watch mode
-$ npm run start:dev
+pnpm start:dev
 
 # production mode
-$ npm run start:prod
+pnpm start:prod
 ```
 
-## Run tests
+### Testing
 
 ```bash
 # unit tests
-$ npm run test
+pnpm test
 
 # e2e tests
-$ npm run test:e2e
+pnpm test:e2e
 
 # test coverage
-$ npm run test:cov
+pnpm test:cov
 ```
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+For production deployment:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Configure your production environment variables in `.env.production`
+2. Build the application:
 
 ```bash
-$ npm install -g mau
-$ mau deploy
+pnpm build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+3. Start the production server:
+
+```bash
+NODE_ENV=production pnpm start:prod
+```
+
+Docker deployment is also supported:
+
+```bash
+docker-compose up -d
+```
+
+## API Documentation
+
+The API documentation is available through Swagger UI:
+
+```
+http://localhost:4000/api/v1/docs
+```
+
+You can use this interactive documentation to explore and test the API endpoints.
 
 ## Resources
 

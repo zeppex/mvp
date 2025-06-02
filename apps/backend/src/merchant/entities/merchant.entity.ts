@@ -4,9 +4,11 @@ import {
   PrimaryColumn,
   BeforeInsert,
   OneToMany,
+  ManyToOne,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
 import { Branch } from './branch.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('merchants')
 export class Merchant {
@@ -30,6 +32,12 @@ export class Merchant {
 
   @Column({ nullable: true })
   binanceId: string;
+
+  @ManyToOne(() => Tenant, { nullable: false })
+  tenant: Tenant;
+
+  @Column('uuid')
+  tenantId: string;
 
   @OneToMany(() => Branch, (branch) => branch.merchant, { cascade: true })
   branches: Branch[];

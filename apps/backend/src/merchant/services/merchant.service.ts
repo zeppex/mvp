@@ -1,11 +1,14 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Merchant } from '../entities/merchant.entity';
 import { CreateMerchantDto } from '../dto';
-import { UUID } from 'crypto';
 import { BinanceClientService } from '../../binance-client/binance-client.service';
-import { getCorrelationId } from '../../shared/middleware/correlation-id.storage';
 
 @Injectable()
 export class MerchantService {
@@ -16,12 +19,18 @@ export class MerchantService {
     private readonly binanceClient: BinanceClientService,
   ) {}
 
-  async create(createMerchantDto: CreateMerchantDto): Promise<Merchant> {
-    const merchant = await this.merchantRepository.create(createMerchantDto);
+  async create(
+    createMerchantDto: CreateMerchantDto,
+    tenantId: string,
+  ): Promise<Merchant> {
+    const merchant = await this.merchantRepository.create({
+      ...createMerchantDto,
+      tenantId,
+    });
     const savedMerchant = await this.merchantRepository.save(merchant);
 
     this.logger.log(
-      `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id}`,
+      `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id} for tenant: ${tenantId}`,
     );
     return savedMerchant;
   }
@@ -30,19 +39,23 @@ export class MerchantService {
     return this.merchantRepository.find();
   }
 
-  async findOne(id: UUID): Promise<Merchant> {
+  async findOne(id: string): Promise<Merchant> {
     const merchant = await this.merchantRepository.findOne({ where: { id } });
     if (!merchant) throw new NotFoundException(`Merchant ${id} not found`);
     return merchant;
   }
 
-  async remove(id: UUID): Promise<void> {
+  async findByTenant(tenantId: string): Promise<Merchant[]> {
+    return this.merchantRepository.find({ where: { tenantId } });
+  }
+
+  async remove(id: string): Promise<void> {
     const result = await this.merchantRepository.delete(id);
     if (result.affected === 0)
       throw new NotFoundException(`Merchant ${id} not found`);
   }
 
-  async createBinanceSubMerchant(id: UUID): Promise<Merchant> {
+  async createBinanceSubMerchant(id: string): Promise<Merchant> {
     // ensure merchant exists
     const merchant = await this.findOne(id);
     // create Binance Pay sub-merchant

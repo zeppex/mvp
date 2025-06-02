@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Pos } from '../entities/pos.entity';
 import { CreatePosDto } from '../dto';
 import { BranchService } from './branch.service';
-import { UUID } from 'crypto';
+import { UUID } from 'src/shared/types/uuid';
 
 @Injectable()
 export class PosService {

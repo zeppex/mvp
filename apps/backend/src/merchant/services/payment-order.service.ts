@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentOrder } from '../entities/payment-order.entity';
 import { CreatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
 import { PosService } from './pos.service';
-import { UUID } from 'crypto';
 import { PaymentOrderStatus } from 'src/shared/enums/payment-order-status.enum';
+import { UUID } from 'src/shared/types/uuid';
 
 @Injectable()
 export class PaymentOrderService {
@@ -22,8 +26,16 @@ export class PaymentOrderService {
     branchId: UUID,
     posId: UUID,
     createDto: CreatePaymentOrderDto,
+    tenantId?: UUID,
   ): Promise<PaymentOrder> {
-    await this.branchService.findOne(merchantId, branchId);
+    // Get branch and check tenant access
+    const branch = await this.branchService.findOne(merchantId, branchId);
+
+    // If tenantId is provided, verify access
+    if (tenantId && branch.merchant.tenantId !== tenantId) {
+      throw new ForbiddenException('You do not have access to this merchant');
+    }
+
     await this.posService.findOne(merchantId, branchId, posId);
 
     const order = new PaymentOrder();
@@ -37,9 +49,9 @@ export class PaymentOrderService {
   }
 
   async findAll(
-    merchantId: UUID,
-    branchId: UUID,
-    posId: UUID,
+    merchantId: string,
+    branchId: string,
+    posId: string,
   ): Promise<PaymentOrder[]> {
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);

@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Branch } from '../entities/branch.entity';
 import { CreateBranchDto } from '../dto';
-import { UUID } from 'crypto';
 import { MerchantService } from './merchant.service';
 
 @Injectable()
@@ -15,11 +18,18 @@ export class BranchService {
   ) {}
 
   async create(
-    merchantId: UUID,
+    merchantId: string,
     createBranchDto: CreateBranchDto,
+    tenantId?: string,
   ): Promise<Branch> {
-    // ensure merchant exists
-    await this.merchantService.findOne(merchantId);
+    // ensure merchant exists and check tenant access
+    const merchant = await this.merchantService.findOne(merchantId);
+
+    // If tenantId is provided, verify access
+    if (tenantId && merchant.tenantId !== tenantId) {
+      throw new ForbiddenException('You do not have access to this merchant');
+    }
+
     const branch = this.branchRepository.create({
       ...createBranchDto,
       merchantId,
@@ -27,26 +37,57 @@ export class BranchService {
     return this.branchRepository.save(branch);
   }
 
-  async findAll(merchantId: string): Promise<Branch[]> {
-    return this.branchRepository.find({ where: { merchantId } });
+  async findAll(merchantId: string, tenantId?: string): Promise<Branch[]> {
+    // If tenantId is provided, verify tenant access to this merchant
+    if (tenantId) {
+      const merchant = await this.merchantService.findOne(merchantId);
+      if (merchant.tenantId !== tenantId) {
+        throw new ForbiddenException('You do not have access to this merchant');
+      }
+    }
+
+    return this.branchRepository.find({
+      where: { merchantId },
+      relations: ['merchant'],
+    });
   }
 
-  async findOne(id: string): Promise<Branch> {
-    const branch = await this.branchRepository.findOne({
-      where: { id },
-    });
-    if (!branch)
-      throw new NotFoundException(
-        `Branch ${id} not found`,
-      );
+  async findOne(
+    id: string,
+    merchantId?: string,
+    tenantId?: string,
+  ): Promise<Branch> {
+    const queryOptions: any = { where: { id } };
+
+    if (merchantId) {
+      queryOptions.where.merchantId = merchantId;
+    }
+
+    queryOptions.relations = ['merchant'];
+
+    const branch = await this.branchRepository.findOne(queryOptions);
+
+    if (!branch) {
+      throw new NotFoundException(`Branch ${id} not found`);
+    }
+
+    // If tenantId is provided, verify tenant access
+    if (tenantId && branch.merchant.tenantId !== tenantId) {
+      throw new ForbiddenException('You do not have access to this branch');
+    }
+
     return branch;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, tenantId?: string): Promise<void> {
+    // Verify tenant access if tenantId is provided
+    if (tenantId) {
+      const branch = await this.findOne(id, undefined, tenantId);
+    }
+
     const result = await this.branchRepository.delete({ id });
-    if (result.affected === 0)
-      throw new NotFoundException(
-        `Branch ${id} not found`,
-      );
+    if (result.affected === 0) {
+      throw new NotFoundException(`Branch ${id} not found`);
+    }
   }
 }

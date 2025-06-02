@@ -6,6 +6,8 @@ import {
   Body,
   Delete,
   ParseUUIDPipe,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { CreateTransactionDto } from './dto';
@@ -16,9 +18,17 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { UUID } from '../shared/types/uuid';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentTenant } from '../auth/decorators/tenant.decorator';
 
 @ApiTags('transactions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('transactions')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
@@ -31,8 +41,11 @@ export class TransactionController {
     description: 'Transaction successfully created.',
     type: Transaction,
   })
-  create(@Body() dto: CreateTransactionDto): Promise<Transaction> {
-    return this.transactionService.create(dto);
+  create(
+    @Body() dto: CreateTransactionDto,
+    @CurrentTenant() tenantId: UUID,
+  ): Promise<Transaction> {
+    return this.transactionService.create(dto, tenantId);
   }
 
   @Get()
@@ -42,8 +55,8 @@ export class TransactionController {
     description: 'Return all transactions.',
     type: [Transaction],
   })
-  findAll(): Promise<Transaction[]> {
-    return this.transactionService.findAll();
+  findAll(@CurrentTenant() tenantId: UUID): Promise<Transaction[]> {
+    return this.transactionService.findAll(tenantId);
   }
 
   @Get(':id')
@@ -60,8 +73,11 @@ export class TransactionController {
     type: Transaction,
   })
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
-  findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Transaction> {
-    return this.transactionService.findOne(id);
+  findOne(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @CurrentTenant() tenantId: UUID,
+  ): Promise<Transaction> {
+    return this.transactionService.findOne(id, tenantId);
   }
 
   @Delete(':id')
@@ -77,7 +93,10 @@ export class TransactionController {
     description: 'Transaction successfully deleted.',
   })
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
-  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
-    return this.transactionService.remove(id);
+  remove(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @CurrentTenant() tenantId: UUID,
+  ): Promise<void> {
+    return this.transactionService.remove(id, tenantId);
   }
 }

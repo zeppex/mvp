@@ -6,6 +6,9 @@ import {
   Body,
   Delete,
   ParseUUIDPipe,
+  UseGuards,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { MerchantService } from '../services/merchant.service';
 import { CreateMerchantDto } from '../dto/create-merchant.dto';
@@ -17,14 +20,19 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
-import { UUID } from 'crypto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../user/entities/user.entity';
 
 @ApiTags('merchants')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('merchants')
 export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
   @ApiOperation({ summary: 'Create a new merchant' })
   @ApiResponse({
     status: 201,
@@ -32,8 +40,29 @@ export class MerchantController {
     type: Merchant,
   })
   @ApiBody({ type: CreateMerchantDto })
-  create(@Body() createMerchantDto: CreateMerchantDto): Promise<Merchant> {
-    return this.merchantService.create(createMerchantDto);
+  async create(
+    @Body() createMerchantDto: CreateMerchantDto,
+    @Request() req,
+  ): Promise<Merchant> {
+    // For ADMIN users, tenantId must be provided
+    if (req.user.role === UserRole.ADMIN && !req.body.tenantId) {
+      throw new ForbiddenException(
+        'tenantId is required when creating a merchant as an admin',
+      );
+    }
+
+    // For TENANT_ADMIN, use their own tenantId and validate they're not trying to create for another tenant
+    if (req.user.role === UserRole.TENANT_ADMIN) {
+      if (req.body.tenantId && req.body.tenantId !== req.user.tenantId) {
+        throw new ForbiddenException(
+          'You can only create merchants for your own tenant',
+        );
+      }
+      return this.merchantService.create(createMerchantDto, req.user.tenantId);
+    }
+
+    // For ADMIN, use the provided tenantId
+    return this.merchantService.create(createMerchantDto, req.body.tenantId);
   }
 
   @Get()
@@ -43,8 +72,17 @@ export class MerchantController {
     description: 'Return all merchants.',
     type: [Merchant],
   })
-  findAll(): Promise<Merchant[]> {
-    return this.merchantService.findAll();
+  async findAll(@Request() req): Promise<Merchant[]> {
+    // ADMIN can see all merchants (optionally filtered by tenantId)
+    if (req.user.role === UserRole.ADMIN) {
+      if (req.query.tenantId) {
+        return this.merchantService.findByTenant(req.query.tenantId);
+      }
+      return this.merchantService.findAll();
+    }
+
+    // TENANT_ADMIN and other roles can only see merchants from their tenant
+    return this.merchantService.findByTenant(req.user.tenantId);
   }
 
   @Get(':id')
@@ -61,7 +99,7 @@ export class MerchantController {
     type: Merchant,
   })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  findOne(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<Merchant> {
+  findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Merchant> {
     return this.merchantService.findOne(id);
   }
 
@@ -75,7 +113,7 @@ export class MerchantController {
   })
   @ApiResponse({ status: 204, description: 'Merchant successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  remove(@Param('id', new ParseUUIDPipe()) id: UUID): Promise<void> {
+  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     return this.merchantService.remove(id);
   }
 
@@ -93,7 +131,7 @@ export class MerchantController {
     type: Merchant,
   })
   createBinanceSubMerchant(
-    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<Merchant> {
     return this.merchantService.createBinanceSubMerchant(id);
   }

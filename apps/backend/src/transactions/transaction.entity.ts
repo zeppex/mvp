@@ -10,6 +10,7 @@ import { Merchant } from '../merchant/entities/merchant.entity';
 import { Branch } from '../merchant/entities/branch.entity';
 import { Pos } from '../merchant/entities/pos.entity';
 import { PaymentOrder } from '../merchant/entities/payment-order.entity';
+import { Tenant } from '../tenant/entities/tenant.entity';
 
 @Entity('transactions')
 export class Transaction {
@@ -60,8 +61,16 @@ export class Transaction {
   @Column()
   description: string;
 
+  @ManyToOne(() => Tenant, { nullable: false })
+  tenant: Tenant;
+
+  @Column('uuid', { nullable: false })
+  tenantId: string;
+
   @BeforeInsert()
   generateId() {
-    this.id = uuidv7();
+    if (!this.id) {
+      this.id = uuidv7();
+    }
   }
 }
