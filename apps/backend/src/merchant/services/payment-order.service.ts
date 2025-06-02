@@ -110,4 +110,23 @@ export class PaymentOrderService {
 
     return order;
   }
+
+  /**
+   * Verifies if a payment order belongs to a specific tenant
+   */
+  async isPaymentOrderFromTenant(
+    orderId: UUID,
+    tenantId: UUID,
+  ): Promise<boolean> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['branch', 'branch.merchant'],
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Payment order ${orderId} not found`);
+    }
+
+    return order.branch.merchant.tenantId === tenantId;
+  }
 }

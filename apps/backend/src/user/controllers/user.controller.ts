@@ -28,41 +28,21 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
   async create(@Body() createUserDto: CreateUserDto, @Request() req) {
-    // Only ADMIN can create users without tenant or for any tenant
-    if (req.user.role !== UserRole.ADMIN) {
-      // TENANT_ADMIN can only create users for their own tenant
-      if (
-        !createUserDto.tenantId ||
-        createUserDto.tenantId !== req.user.tenantId
-      ) {
-        throw new ForbiddenException(
-          'You can only create users for your tenant',
-        );
-      }
-
-      // TENANT_ADMIN can't create other TENANT_ADMINs or ADMINs
-      if (
-        createUserDto.role === UserRole.TENANT_ADMIN ||
-        createUserDto.role === UserRole.ADMIN
-      ) {
-        throw new ForbiddenException('You cannot create users with this role');
-      }
-    }
-
-    return this.userService.create(createUserDto);
+    // Creation logic is now fully handled by the service with proper validation
+    return this.userService.create(createUserDto, req.user);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
   async findAll(@Request() req, @Query('tenantId') tenantId?: string) {
-    // ADMIN can see all users or filter by tenant
-    if (req.user.role === UserRole.ADMIN) {
+    // SUPERADMIN and ADMIN can see all users or filter by tenant
+    if (req.user.role === UserRole.SUPERADMIN || req.user.role === UserRole.ADMIN) {
       if (tenantId) {
         return this.userService.findByTenant(tenantId);
       }
-      return this.userService.findAll();
+      return this.userService.findAll(req.user);
     }
 
     // TENANT_ADMIN can only see users from their own tenant

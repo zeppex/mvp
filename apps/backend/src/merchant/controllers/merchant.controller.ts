@@ -34,7 +34,7 @@ export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
   @ApiOperation({ summary: 'Create a new merchant' })
   @ApiResponse({
     status: 201,
@@ -101,8 +101,17 @@ export class MerchantController {
     type: Merchant,
   })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Merchant> {
-    return this.merchantService.findOne(id);
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string, @Request() req): Promise<Merchant> {
+    const merchant = await this.merchantService.findOne(id);
+    
+    // If user is not SUPERADMIN or ADMIN, check tenant access
+    if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
+      if (merchant.tenantId !== req.user.tenantId) {
+        throw new ForbiddenException('You can only access merchants from your own tenant');
+      }
+    }
+    
+    return merchant;
   }
 
   @Delete(':id')
@@ -115,7 +124,17 @@ export class MerchantController {
   })
   @ApiResponse({ status: 204, description: 'Merchant successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  async remove(@Param('id', new ParseUUIDPipe()) id: string, @Request() req): Promise<void> {
+    const merchant = await this.merchantService.findOne(id);
+    
+    // If user is not SUPERADMIN or ADMIN, check tenant access
+    if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
+      if (merchant.tenantId !== req.user.tenantId) {
+        throw new ForbiddenException('You can only delete merchants from your own tenant');
+      }
+    }
+    
     return this.merchantService.remove(id);
   }
 

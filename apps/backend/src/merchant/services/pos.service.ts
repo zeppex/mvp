@@ -28,39 +28,40 @@ export class PosService {
     return this.posRepository.save(pos);
   }
 
-  async findAll(
-    merchantId: UUID,
-    branchId: UUID,
-  ): Promise<Pos[]> {
+  async findAll(merchantId: UUID, branchId: UUID): Promise<Pos[]> {
     // ensure branch exists
     await this.branchService.findOne(merchantId, branchId);
     return this.posRepository.find({ where: { branchId } });
   }
 
-  async findOne(
-    merchantId: UUID,
-    branchId: UUID,
-    id: UUID,
-  ): Promise<Pos> {
+  async findOne(merchantId: UUID, branchId: UUID, id: UUID): Promise<Pos> {
     await this.branchService.findOne(merchantId, branchId);
     const pos = await this.posRepository.findOne({ where: { id, branchId } });
     if (!pos)
-      throw new NotFoundException(
-        `POS ${id} not found for branch ${branchId}`,
-      );
+      throw new NotFoundException(`POS ${id} not found for branch ${branchId}`);
     return pos;
   }
 
-  async remove(
-    merchantId: UUID,
-    branchId: UUID,
-    id: UUID,
-  ): Promise<void> {
+  async remove(merchantId: UUID, branchId: UUID, id: UUID): Promise<void> {
     await this.branchService.findOne(merchantId, branchId);
     const result = await this.posRepository.delete({ id, branchId });
     if (result.affected === 0)
-      throw new NotFoundException(
-        `POS ${id} not found for branch ${branchId}`,
-      );
+      throw new NotFoundException(`POS ${id} not found for branch ${branchId}`);
+  }
+
+  /**
+   * Verifies if a POS belongs to a specific tenant
+   */
+  async isPosFromTenant(posId: UUID, tenantId: UUID): Promise<boolean> {
+    const pos = await this.posRepository.findOne({
+      where: { id: posId },
+      relations: ['branch', 'branch.merchant'],
+    });
+
+    if (!pos) {
+      throw new NotFoundException(`POS ${posId} not found`);
+    }
+
+    return pos.branch.merchant.tenantId === tenantId;
   }
 }

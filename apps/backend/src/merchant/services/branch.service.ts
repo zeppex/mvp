@@ -90,4 +90,26 @@ export class BranchService {
       throw new NotFoundException(`Branch ${id} not found`);
     }
   }
+
+  /**
+   * Verifies if a merchant belongs to the specified tenant
+   */
+  async isMerchantFromTenant(
+    merchantId: string,
+    tenantId: string,
+  ): Promise<boolean> {
+    const merchant = await this.merchantService.findOne(merchantId);
+    return merchant.tenantId === tenantId;
+  }
+
+  /**
+   * Verifies if a branch belongs to the specified tenant
+   */
+  async isBranchFromTenant(
+    branchId: string,
+    tenantId: string,
+  ): Promise<boolean> {
+    const branch = await this.findOne(branchId);
+    return branch.merchant.tenantId === tenantId;
+  }
 }

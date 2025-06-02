@@ -11,6 +11,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { Tenant } from '../../tenant/entities/tenant.entity';
 
 export enum UserRole {
+  SUPERADMIN = 'superadmin',
   ADMIN = 'admin',
   TENANT_ADMIN = 'tenant_admin',
   MERCHANT_ADMIN = 'merchant_admin',

@@ -49,13 +49,18 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'The role of the user',
     enum: UserRole,
-    example: 'ADMIN',
+    example: 'tenant_admin',
     required: false,
   })
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
 
+  @ApiProperty({
+    description: 'The ID of the tenant this user belongs to',
+    example: '019730ab-7b64-7218-aad6-773cdcbb719f',
+    required: false,
+  })
   @IsUUID()
   @IsOptional()
   tenantId?: string;

@@ -6,6 +6,9 @@ import {
   Body,
   Delete,
   ParseUUIDPipe,
+  UseGuards,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PaymentOrderService } from '../services/payment-order.service';
 import { CreatePaymentOrderDto } from '../dto';
@@ -16,15 +19,27 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UUID } from 'crypto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../user/entities/user.entity';
+import { BranchService } from '../services/branch.service';
 
+@ApiBearerAuth('access-token')
 @ApiTags('payment-orders')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('merchants/:merchantId/branches/:branchId/pos/:posId/orders')
 export class PaymentOrderController {
-  constructor(private readonly orderService: PaymentOrderService) {}
+  constructor(
+    private readonly orderService: PaymentOrderService,
+    private readonly branchService: BranchService,
+  ) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
   @ApiOperation({ summary: 'Create a new payment order' })
   @ApiParam({
     name: 'merchantId',
@@ -43,12 +58,27 @@ export class PaymentOrderController {
     description: 'Payment order created.',
     type: PaymentOrder,
   })
-  create(
+  async create(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Body() dto: CreatePaymentOrderDto,
+    @Request() req,
   ): Promise<PaymentOrder> {
+    // For TENANT_ADMIN, verify that the branch belongs to their tenant
+    if (req.user.role === UserRole.TENANT_ADMIN) {
+      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
+        branchId,
+        req.user.tenantId,
+      );
+
+      if (!isBranchFromTenant) {
+        throw new ForbiddenException(
+          'You can only create payment orders for branches in your tenant',
+        );
+      }
+    }
+
     return this.orderService.create(merchantId, branchId, posId, dto);
   }
 
@@ -70,11 +100,26 @@ export class PaymentOrderController {
     description: 'List of payment orders.',
     type: [PaymentOrder],
   })
-  findAll(
+  async findAll(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
+    @Request() req,
   ): Promise<PaymentOrder[]> {
+    // For TENANT_ADMIN, verify that the branch belongs to their tenant
+    if (req.user.role === UserRole.TENANT_ADMIN) {
+      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
+        branchId,
+        req.user.tenantId,
+      );
+
+      if (!isBranchFromTenant) {
+        throw new ForbiddenException(
+          'You can only access payment orders for branches in your tenant',
+        );
+      }
+    }
+
     return this.orderService.findAll(merchantId, branchId, posId);
   }
 
@@ -98,16 +143,32 @@ export class PaymentOrderController {
     type: PaymentOrder,
   })
   @ApiResponse({ status: 404, description: 'Payment order not found.' })
-  findOne(
+  async findOne(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Request() req,
   ): Promise<PaymentOrder> {
+    // For TENANT_ADMIN, verify that the branch belongs to their tenant
+    if (req.user.role === UserRole.TENANT_ADMIN) {
+      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
+        branchId,
+        req.user.tenantId,
+      );
+
+      if (!isBranchFromTenant) {
+        throw new ForbiddenException(
+          'You can only access payment orders for branches in your tenant',
+        );
+      }
+    }
+
     return this.orderService.findOne(merchantId, branchId, posId, id);
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
   @ApiOperation({ summary: 'Delete a payment order by ID' })
   @ApiParam({
     name: 'merchantId',
@@ -123,12 +184,27 @@ export class PaymentOrderController {
   @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
   @ApiResponse({ status: 204, description: 'Payment order deleted.' })
   @ApiResponse({ status: 404, description: 'Payment order not found.' })
-  remove(
+  async remove(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Request() req,
   ): Promise<void> {
+    // For TENANT_ADMIN, verify that the branch belongs to their tenant
+    if (req.user.role === UserRole.TENANT_ADMIN) {
+      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
+        branchId,
+        req.user.tenantId,
+      );
+
+      if (!isBranchFromTenant) {
+        throw new ForbiddenException(
+          'You can only delete payment orders for branches in your tenant',
+        );
+      }
+    }
+
     return this.orderService.remove(merchantId, branchId, posId, id);
   }
 }

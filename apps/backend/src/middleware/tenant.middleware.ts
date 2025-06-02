@@ -14,9 +14,14 @@ export class TenantMiddleware implements NestMiddleware {
         const token = authHeader.substring(7);
         const decoded = this.jwtService.verify(token);
 
-        // Add tenant information to request object
-        if (decoded && decoded.tenantId) {
-          req['tenantId'] = decoded.tenantId;
+        // Add user and tenant information to request object
+        if (decoded) {
+          if (decoded.tenantId) {
+            req['tenantId'] = decoded.tenantId;
+          }
+          if (decoded.role) {
+            req['userRole'] = decoded.role;
+          }
         }
       } catch (error) {
         // Token verification failed, continue without tenant info

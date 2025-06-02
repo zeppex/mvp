@@ -22,12 +22,34 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const { user } = request;
 
     if (!user || !user.role) {
       throw new ForbiddenException('User role not defined');
     }
 
-    return requiredRoles.includes(user.role);
+    // SUPERADMIN has access to everything
+    if (user.role === UserRole.SUPERADMIN) {
+      return true;
+    }
+
+    // Check if the role is authorized
+    const isRoleAuthorized = requiredRoles.includes(user.role);
+    if (!isRoleAuthorized) {
+      return false;
+    }
+
+    // For tenant-scoped roles, check tenant context
+    if (user.role !== UserRole.SUPERADMIN && user.role !== UserRole.ADMIN) {
+      const requestTenantId = request.params.tenantId || request.body.tenantId || request.query.tenantId || request.tenantId;
+      
+      // If there's a tenant context in the request, ensure the user belongs to that tenant
+      if (requestTenantId && user.tenantId && requestTenantId !== user.tenantId) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
