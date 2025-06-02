@@ -27,7 +27,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentTenant } from '../auth/decorators/tenant.decorator';
 
 @ApiTags('transactions')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('transactions')
 export class TransactionController {

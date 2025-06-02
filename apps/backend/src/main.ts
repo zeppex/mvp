@@ -10,8 +10,14 @@ async function bootstrap() {
     .setTitle('Zeppex Core API')
     .setDescription('Zeppex Core API MVP documentation')
     .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'JWT access-token',
+      { 
+        type: 'http', 
+        scheme: 'bearer', 
+        bearerFormat: 'JWT',
+        in: 'header',
+        name: 'Authorization' 
+      },
+      'access-token',
     )
     .setVersion('0.1')
     .build();

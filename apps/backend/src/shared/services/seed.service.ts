@@ -15,29 +15,19 @@ export class SeedService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    this.logger.log('Seeding default admin data...');
+    this.logger.log('Starting database seeding...');
 
     try {
-      // First try to seed the configurable admin
+      // Try to seed the configurable admin first
       await this.seedDefaultTenantAndAdmin();
+
+      // Always create the hardcoded superadmin for guaranteed access
+      await this.createHardcodedAdmin();
+
+      this.logger.log('Database seeding completed successfully.');
     } catch (error) {
-      this.logger.error(
-        'Failed to seed configurable admin. Creating hardcoded admin as fallback.',
-        error.stack,
-      );
-
-      // Fallback to hardcoded admin if the configurable one fails
-      try {
-        await this.createHardcodedAdmin();
-      } catch (fallbackError) {
-        this.logger.error(
-          'Failed to create hardcoded admin. System may lack admin access.',
-          fallbackError.stack,
-        );
-      }
+      this.logger.error('Failed to complete database seeding.', error.stack);
     }
-
-    this.logger.log('Admin seeding complete.');
   }
 
   async seedDefaultTenantAndAdmin() {
@@ -58,84 +48,85 @@ export class SeedService implements OnApplicationBootstrap {
     const adminFirstName = this.configService.get('ADMIN_FIRST_NAME', 'Admin');
     const adminLastName = this.configService.get('ADMIN_LAST_NAME', 'User');
 
-    // Check if default tenant exists
-    let defaultTenantId: string;
+    this.logger.log(
+      `Seeding admin tenant: ${adminTenantName} and user: ${adminEmail}`,
+    );
+
+    // Find or create default tenant
+    let defaultTenant;
     try {
-      const defaultTenant =
-        await this.tenantService.findByName(adminTenantName);
-      defaultTenantId = defaultTenant.id;
-      this.logger.log('Default tenant already exists');
+      defaultTenant = await this.tenantService.findByName(adminTenantName);
+      this.logger.log(
+        `Default tenant found: ${defaultTenant.name} (${defaultTenant.id})`,
+      );
     } catch (error) {
-      // Create default tenant
-      const tenant = await this.tenantService.create({
+      this.logger.log(`Default tenant not found, creating...`);
+      defaultTenant = await this.tenantService.create({
         name: adminTenantName,
         displayName: adminTenantDisplayName,
       });
-      defaultTenantId = tenant.id;
-      this.logger.log('Default tenant created');
+      this.logger.log(
+        `Default tenant created: ${defaultTenant.name} (${defaultTenant.id})`,
+      );
     }
 
-    // Check if admin user exists
+    // Find or create admin user
+    let adminUser;
     try {
-      await this.userService.findByEmail(adminEmail);
-      this.logger.log('Admin user already exists');
+      adminUser = await this.userService.findByEmail(adminEmail);
+      this.logger.log(`Admin user found: ${adminUser.email}`);
     } catch (error) {
-      // Create admin user
-      await this.userService.create({
+      this.logger.log(`Admin user not found, creating...`);
+      adminUser = await this.userService.create({
         email: adminEmail,
         password: adminPassword,
         firstName: adminFirstName,
         lastName: adminLastName,
         role: UserRole.ADMIN,
-        tenantId: defaultTenantId,
+        tenantId: defaultTenant.id,
       });
-      this.logger.log('Admin user created');
+      this.logger.log(`Admin user created: ${adminUser.email}`);
     }
   }
 
   /**
-   * Creates a hardcoded admin user as a fallback.
-   * This ensures there's always an admin account available for system access.
+   * Creates a hardcoded superadmin user to ensure system access.
+   * This user will always be created regardless of environment configuration.
    */
   async createHardcodedAdmin() {
-    // Create a hardcoded admin tenant
-    let hardcodedTenantId: string;
+    this.logger.log('Ensuring superadmin user exists...');
+
+    // Find or create hardcoded admin tenant
+    let superadminTenant;
     try {
-      const tenant = await this.tenantService.create({
+      superadminTenant = await this.tenantService.findByName('superadmin');
+      this.logger.log(`Superadmin tenant found: ${superadminTenant.id}`);
+    } catch (error) {
+      this.logger.log('Creating superadmin tenant...');
+      superadminTenant = await this.tenantService.create({
         name: 'superadmin',
         displayName: 'System Super Administrator',
+        isActive: true,
       });
-      hardcodedTenantId = tenant.id;
-      this.logger.log('Hardcoded admin tenant created');
-    } catch (error) {
-      // If tenant creation fails, try to fetch existing one
-      try {
-        const tenant = await this.tenantService.findByName('superadmin');
-        hardcodedTenantId = tenant.id;
-      } catch (innerError) {
-        throw new Error('Could not create or find hardcoded admin tenant');
-      }
+      this.logger.log(`Superadmin tenant created: ${superadminTenant.id}`);
     }
 
-    // Create a hardcoded admin user
+    // Find or create hardcoded admin user
+    const superadminEmail = 'superadmin@zeppex.com';
     try {
-      await this.userService.create({
-        email: 'superadmin@zeppex.com',
-        password: 'SuperAdmin!123', // This is hardcoded but secure for fallback purposes
+      const existingUser = await this.userService.findByEmail(superadminEmail);
+      this.logger.log(`Superadmin user already exists: ${existingUser.email}`);
+    } catch (error) {
+      this.logger.log('Creating superadmin user...');
+      const superadminUser = await this.userService.create({
+        email: superadminEmail,
+        password: 'SuperAdmin!123',
         firstName: 'Super',
         lastName: 'Admin',
         role: UserRole.ADMIN,
-        tenantId: hardcodedTenantId,
+        tenantId: superadminTenant.id,
       });
-      this.logger.log('Hardcoded admin user created');
-    } catch (error) {
-      // Check if user already exists
-      try {
-        await this.userService.findByEmail('superadmin@zeppex.com');
-        this.logger.log('Hardcoded admin user already exists');
-      } catch (innerError) {
-        throw new Error('Could not create hardcoded admin user');
-      }
+      this.logger.log(`Superadmin user created: ${superadminUser.email}`);
     }
   }
 }
