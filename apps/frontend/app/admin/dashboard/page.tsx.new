@@ -2,13 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Building, DollarSign, Users } from "lucide-react"
+import { BarChart3, Building, CheckCircle2, Clock, DollarSign, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { AuthGuard } from "@/components/AuthGuard"
 import { UserRole } from "@/types/enums"
 import { getCurrentUser } from "@/lib/auth"
-import AuthTester from "@/components/auth/AuthTester"
 
 // Admin Dashboard with authentication guard
 export default function AdminDashboard() {
@@ -214,12 +213,6 @@ function DashboardContent() {
           </div>
         </TabsContent>
       </Tabs>
-      
-      {/* Auth Tester for development and testing */}
-      <div className="pt-8 border-t">
-        <h3 className="text-lg font-semibold mb-4">Auth System Tester</h3>
-        <AuthTester />
-      </div>
     </div>
   )
 }
