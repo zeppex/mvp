@@ -123,7 +123,7 @@ export class SeedService implements OnApplicationBootstrap {
         password: 'SuperAdmin!123',
         firstName: 'Super',
         lastName: 'Admin',
-        role: UserRole.ADMIN,
+        role: UserRole.SUPERADMIN,
         tenantId: superadminTenant.id,
       });
       this.logger.log(`Superadmin user created: ${superadminUser.email}`);
