@@ -11,6 +11,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Zeppex - Crypto Payment Processor",
   description: "Accept crypto payments in your physical and online stores",
+  icons: {
+    icon: "/favicon.ico",
+  },
 }
 
 export default function RootLayout({

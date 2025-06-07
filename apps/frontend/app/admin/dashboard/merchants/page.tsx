@@ -2,7 +2,7 @@
 
 import { Label } from "@/components/ui/label"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building, CheckCircle2, Clock, Filter, MoreHorizontal, PauseCircle, Plus, Search } from "lucide-react"
+import { Building, CheckCircle2, Filter, MoreHorizontal, PauseCircle, Plus, Search, Loader2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -26,109 +26,92 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-
-// Mock merchant data
-const merchants = [
-  {
-    id: "M001",
-    name: "Starbucks",
-    branch: "Unicenter 2",
-    locations: 1,
-    transactions: 245,
-    volume: 2450.75,
-    status: "active",
-    createdAt: "2025-01-15T10:00:00",
-  },
-  {
-    id: "M002",
-    name: "Howtradethat",
-    branch: "Main Branch",
-    locations: 3,
-    transactions: 187,
-    volume: 5621.5,
-    status: "active",
-    createdAt: "2025-02-20T14:30:00",
-  },
-  {
-    id: "M003",
-    name: "Tech Gadgets Inc",
-    branch: "Downtown",
-    locations: 1,
-    transactions: 92,
-    volume: 8750.25,
-    status: "active",
-    createdAt: "2025-03-10T09:15:00",
-  },
-  {
-    id: "M004",
-    name: "Fitness First",
-    branch: "North",
-    locations: 2,
-    transactions: 0,
-    volume: 0,
-    status: "pending",
-    createdAt: "2025-05-12T11:45:00",
-  },
-  {
-    id: "M005",
-    name: "Organic Foods",
-    branch: "Central",
-    locations: 1,
-    transactions: 56,
-    volume: 1250.8,
-    status: "paused",
-    createdAt: "2025-04-05T16:20:00",
-  },
-]
+import merchantApi, { type Merchant } from "@/lib/merchant-api"
 
 export default function MerchantsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showPauseDialog, setShowPauseDialog] = useState(false)
-  const [selectedMerchant, setSelectedMerchant] = useState<any>(null)
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null)
   const [pauseReason, setPauseReason] = useState("")
+  const [merchants, setMerchants] = useState<Merchant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch merchants on component mount
+  useEffect(() => {
+    const fetchMerchants = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await merchantApi.getAllMerchants()
+        setMerchants(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch merchants')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMerchants()
+  }, [])
 
   const filteredMerchants = merchants.filter((merchant) => {
-    // Apply search filter
+    // Apply search filter - using merchant.name and contact
     const matchesSearch =
       merchant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      merchant.branch.toLowerCase().includes(searchQuery.toLowerCase())
+      merchant.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      merchant.contactName.toLowerCase().includes(searchQuery.toLowerCase())
 
-    // Apply status filter
-    const matchesStatus = statusFilter === "all" || merchant.status === statusFilter
+    // Apply status filter - using isActive instead of status
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "active" && merchant.isActive) || 
+      (statusFilter === "paused" && !merchant.isActive)
 
     return matchesSearch && matchesStatus
   })
 
-  const handlePause = (merchant: any) => {
+  const handlePause = (merchant: Merchant) => {
     setSelectedMerchant(merchant)
     setPauseReason("")
     setShowPauseDialog(true)
   }
 
-  const confirmPause = () => {
-    // Simulate pausing merchant
-    setTimeout(() => {
+  const confirmPause = async () => {
+    if (!selectedMerchant) return
+    
+    try {
+      // Update merchant status via API
+      await merchantApi.updateMerchant(selectedMerchant.id, {
+        ...selectedMerchant,
+        isActive: false
+      })
+      
+      // Update local state
+      setMerchants(prev => 
+        prev.map(m => 
+          m.id === selectedMerchant.id 
+            ? { ...m, isActive: false } 
+            : m
+        )
+      )
+      
       setShowPauseDialog(false)
-    }, 500)
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
-      case "pending":
-        return <Clock className="h-4 w-4 text-amber-500" />
-      case "paused":
-        return <PauseCircle className="h-4 w-4 text-red-500" />
-      default:
-        return null
+    } catch (err) {
+      console.error('Failed to pause merchant:', err)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString()
+  const getStatusIcon = (isActive: boolean) => {
+    if (isActive) {
+      return <CheckCircle2 className="h-4 w-4 text-green-500" />
+    } else {
+      return <PauseCircle className="h-4 w-4 text-red-500" />
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString()
   }
 
   return (
@@ -175,7 +158,6 @@ export default function MerchantsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="paused">Paused</SelectItem>
                 </SelectContent>
               </Select>
@@ -187,16 +169,31 @@ export default function MerchantsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Merchant</TableHead>
-                  <TableHead>Locations</TableHead>
-                  <TableHead>Transactions</TableHead>
-                  <TableHead>Volume</TableHead>
+                  <TableHead>Branches</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Tenant</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMerchants.length === 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading merchants...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-red-500">
+                      Error: {error}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredMerchants.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-4">
                       No merchants found
@@ -208,16 +205,23 @@ export default function MerchantsPage() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{merchant.name}</div>
-                          <div className="text-sm text-muted-foreground">{merchant.branch}</div>
+                          <div className="text-sm text-muted-foreground">{merchant.address}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{merchant.locations}</TableCell>
-                      <TableCell>{merchant.transactions}</TableCell>
-                      <TableCell>${merchant.volume.toFixed(2)}</TableCell>
+                      <TableCell>{merchant.branches?.length || 0}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{merchant.contactName}</div>
+                          <div className="text-sm text-muted-foreground">{merchant.contactPhone}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{merchant.tenant.name}</div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(merchant.status)}
-                          <span className="capitalize">{merchant.status}</span>
+                          {getStatusIcon(merchant.isActive)}
+                          <span className="capitalize">{merchant.isActive ? 'Active' : 'Paused'}</span>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(merchant.createdAt)}</TableCell>
@@ -238,11 +242,11 @@ export default function MerchantsPage() {
                               <Link href={`/admin/dashboard/merchants/${merchant.id}/edit`}>Edit Merchant</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {merchant.status === "active" ? (
+                            {merchant.isActive ? (
                               <DropdownMenuItem onClick={() => handlePause(merchant)}>Pause Merchant</DropdownMenuItem>
-                            ) : merchant.status === "paused" ? (
+                            ) : (
                               <DropdownMenuItem>Resume Merchant</DropdownMenuItem>
-                            ) : null}
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -260,7 +264,7 @@ export default function MerchantsPage() {
           <DialogHeader>
             <DialogTitle>Pause Merchant</DialogTitle>
             <DialogDescription>
-              You are about to pause {selectedMerchant?.name} - {selectedMerchant?.branch}. This will prevent them from
+              You are about to pause {selectedMerchant?.name}. This will prevent them from
               processing payments.
             </DialogDescription>
           </DialogHeader>
@@ -271,7 +275,7 @@ export default function MerchantsPage() {
               </div>
               <div>
                 <p className="font-medium">{selectedMerchant?.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedMerchant?.branch}</p>
+                <p className="text-sm text-muted-foreground">{selectedMerchant?.address}</p>
               </div>
             </div>
             <div className="space-y-2">
