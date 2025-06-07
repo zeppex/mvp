@@ -1,43 +1,58 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Building, DollarSign, Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { AuthGuard } from "@/components/AuthGuard"
-import { UserRole } from "@/types/enums"
-import { getCurrentUser } from "@/lib/auth"
-import AuthTester from "@/components/auth/AuthTester"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, Building, DollarSign, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { UserRole } from "@/types/enums";
+import { useSession } from "next-auth/react";
+import { withNextAuth } from "@/components/withNextAuth";
 
-// Admin Dashboard with authentication guard
-export default function AdminDashboard() {
-  const allowedRoles = [
-    UserRole.SUPERADMIN,
-    UserRole.ADMIN
-  ]
-  
-  return (
-    <AuthGuard allowedRoles={allowedRoles} redirectTo="/admin/login">
-      <DashboardContent />
-    </AuthGuard>
-  )
-}
+// Admin dashboard component protected by withNextAuth HOC
+const AdminDashboard = withNextAuth(
+  () => {
+    const { data: session } = useSession();
+    return <DashboardContent session={session!} />;
+  },
+  {
+    requiredRoles: [UserRole.SUPERADMIN, UserRole.ADMIN],
+    loginUrl: "/admin/login",
+  }
+);
+
+// Export default AdminDashboard
+export default AdminDashboard;
 
 // Inner dashboard content
-function DashboardContent() {
-  const user = getCurrentUser()
-  
+function DashboardContent({
+  session,
+}: {
+  session: import("next-auth").Session;
+}) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Welcome back, {user?.firstName || 'Admin'}</h2>
-          <p className="text-muted-foreground">Here&apos;s an overview of the Zeppex platform</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Welcome back, {session.user.firstName || "Admin"}
+          </h2>
+          <p className="text-muted-foreground">
+            Here&apos;s an overview of the Zeppex platform
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild>
+          <Button asChild className="mr-2">
             <Link href="/admin/dashboard/merchants/new">Add New Merchant</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/tenants">Manage Tenants</Link>
           </Button>
         </div>
       </div>
@@ -51,7 +66,9 @@ function DashboardContent() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Merchants</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Merchants
+                </CardTitle>
                 <Building className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -63,7 +80,9 @@ function DashboardContent() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Users
+                </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -75,7 +94,9 @@ function DashboardContent() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Revenue
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -87,7 +108,9 @@ function DashboardContent() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Transactions</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Active Transactions
+                </CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -112,59 +135,81 @@ function DashboardContent() {
             <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>Recent Onboardings</CardTitle>
-                <CardDescription>
-                  Recently added merchants
-                </CardDescription>
+                <CardDescription>Recently added merchants</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 flex items-center justify-center bg-blue-100 dark:bg-blue-900 rounded-full">
-                        <span className="font-medium text-blue-600 dark:text-blue-300">SB</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-300">
+                          SB
+                        </span>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Starbucks Coffee</p>
-                        <p className="text-xs text-muted-foreground">Added 2 days ago</p>
+                        <p className="text-xs text-muted-foreground">
+                          Added 2 days ago
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">View</Button>
+                    <Button variant="outline" size="sm">
+                      View
+                    </Button>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 flex items-center justify-center bg-purple-100 dark:bg-purple-900 rounded-full">
-                        <span className="font-medium text-purple-600 dark:text-purple-300">TH</span>
+                        <span className="font-medium text-purple-600 dark:text-purple-300">
+                          TH
+                        </span>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Tech Horizon</p>
-                        <p className="text-xs text-muted-foreground">Added 3 days ago</p>
+                        <p className="text-xs text-muted-foreground">
+                          Added 3 days ago
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">View</Button>
+                    <Button variant="outline" size="sm">
+                      View
+                    </Button>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 flex items-center justify-center bg-green-100 dark:bg-green-900 rounded-full">
-                        <span className="font-medium text-green-600 dark:text-green-300">UF</span>
+                        <span className="font-medium text-green-600 dark:text-green-300">
+                          UF
+                        </span>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Urban Fusion</p>
-                        <p className="text-xs text-muted-foreground">Added 5 days ago</p>
+                        <p className="text-xs text-muted-foreground">
+                          Added 5 days ago
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">View</Button>
+                    <Button variant="outline" size="sm">
+                      View
+                    </Button>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 flex items-center justify-center bg-amber-100 dark:bg-amber-900 rounded-full">
-                        <span className="font-medium text-amber-600 dark:text-amber-300">GS</span>
+                        <span className="font-medium text-amber-600 dark:text-amber-300">
+                          GS
+                        </span>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Grocery Stop</p>
-                        <p className="text-xs text-muted-foreground">Added 1 week ago</p>
+                        <p className="text-xs text-muted-foreground">
+                          Added 1 week ago
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">View</Button>
+                    <Button variant="outline" size="sm">
+                      View
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -214,12 +259,16 @@ function DashboardContent() {
           </div>
         </TabsContent>
       </Tabs>
-      
-      {/* Auth Tester for development and testing */}
+
+      {/* Auth debug info for development */}
       <div className="pt-8 border-t">
-        <h3 className="text-lg font-semibold mb-4">Auth System Tester</h3>
-        <AuthTester />
+        <h3 className="text-lg font-semibold mb-4">Auth Session Info</h3>
+        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded">
+          <pre className="text-xs overflow-auto">
+            {JSON.stringify(session, null, 2)}
+          </pre>
+        </div>
       </div>
     </div>
-  )
+  );
 }

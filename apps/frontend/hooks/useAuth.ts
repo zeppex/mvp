@@ -12,15 +12,20 @@ interface UseAuthOptions {
 }
 
 export function useAuth(options: UseAuthOptions = {}) {
+  // Initialize with null values for SSR compatibility
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Start with false for loading during SSR to prevent hydration mismatch
+  const [loading, setLoading] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   const { redirectTo, requiredRoles = [] } = options;
 
   // Function to handle token refresh
   const handleTokenRefresh = useCallback(async () => {
+    if (typeof window === "undefined") return true;
+
     if (isTokenExpiringSoon() && authenticated) {
       try {
         const refreshResponse = await refreshToken();
@@ -37,8 +42,12 @@ export function useAuth(options: UseAuthOptions = {}) {
     return true;
   }, [authenticated]);
 
-  // Check authentication status on mount
+  // Check authentication status on mount, but only on the client
   useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+
+    // Only check auth on the client side
     const checkAuth = () => {
       try {
         const isAuthenticated = isLoggedIn();
@@ -73,18 +82,23 @@ export function useAuth(options: UseAuthOptions = {}) {
 
   // Set up interval to refresh token
   useEffect(() => {
+    // Only set up refresh monitoring if user is authenticated
+    if (!authenticated) return;
+
     // Check token status every minute
     const refreshInterval = setInterval(() => {
       handleTokenRefresh();
     }, 60000); // 1 minute
 
     // Also refresh immediately on mount if needed
-    handleTokenRefresh();
+    if (isTokenExpiringSoon()) {
+      handleTokenRefresh();
+    }
 
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [handleTokenRefresh]);
+  }, [handleTokenRefresh, authenticated]);
 
   // Handle logout
   const handleLogout = async () => {
@@ -101,6 +115,7 @@ export function useAuth(options: UseAuthOptions = {}) {
     user,
     authenticated,
     loading,
+    mounted,
     logout: handleLogout,
     refreshToken: handleTokenRefresh,
   };

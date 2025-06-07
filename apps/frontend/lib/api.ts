@@ -1,5 +1,5 @@
 // Api client for making requests to the backend
-import apiClient from "./axios";
+import apiClient from "./axios-next-auth";
 
 interface ApiResponse<T> {
   data: T;

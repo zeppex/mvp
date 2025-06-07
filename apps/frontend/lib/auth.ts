@@ -78,8 +78,17 @@ export async function refreshToken(): Promise<RefreshTokenResponse | null> {
 
 // Function to check if user is logged in
 export function isLoggedIn(): boolean {
-  // Check if we have both tokens
-  return Boolean(getAccessToken()) && Boolean(getRefreshToken());
+  // Server-side rendering - fallback to false
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  // Check if access and refresh tokens exist
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+
+  // Ensure tokens are valid and not expired
+  return Boolean(accessToken && refreshToken && !isTokenExpired());
 }
 
 // Re-export functions from cookies.ts
@@ -95,7 +104,7 @@ export async function logout(): Promise<void> {
   } finally {
     // Clear cookies
     clearAuthCookies();
-    
+
     // Clear user data from localStorage
     if (typeof window !== "undefined") {
       localStorage.removeItem(USER_STORAGE_KEY);
@@ -105,16 +114,20 @@ export async function logout(): Promise<void> {
 
 // Function to get the current user
 export function getCurrentUser(): User | null {
+  // For SSR, we'll return null and handle this with useEffect on the client
   if (typeof window === "undefined") return null;
-  
+
   // First check if we're logged in
   if (!isLoggedIn()) return null;
-  
+
   const userStr = localStorage.getItem(USER_STORAGE_KEY);
+  console.log("User data from localStorage:", userStr);
   if (!userStr) return null;
 
   try {
-    return JSON.parse(userStr) as User;
+    const user = JSON.parse(userStr) as User;
+    console.log("Parsed user data:", user);
+    return user;
   } catch (error) {
     console.error("Error parsing user data:", error);
     return null;

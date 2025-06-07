@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn, getCurrentUser } from "@/lib/auth";
 import { UserRole } from "@/types/enums";
@@ -17,10 +17,17 @@ export function AuthGuard({
   redirectTo = "/admin/login",
 }: AuthGuardProps) {
   const router = useRouter();
-  const loggedIn = isLoggedIn();
-  const user = getCurrentUser();
+  const [authorized, setAuthorized] = useState(false);
+  // Use state to avoid infinite re-renders from repeatedly calling these functions
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // Only check auth state once
+    if (authChecked) return;
+
+    const loggedIn = isLoggedIn();
+    const user = getCurrentUser();
+
     // If not logged in, redirect to login
     if (!loggedIn) {
       router.replace(redirectTo);
@@ -29,6 +36,8 @@ export function AuthGuard({
 
     // If no specific roles are required, or user has no role, just check login status
     if (allowedRoles.length === 0 || !user?.role) {
+      setAuthorized(true);
+      setAuthChecked(true);
       return;
     }
 
@@ -36,11 +45,15 @@ export function AuthGuard({
     const hasAllowedRole = allowedRoles.includes(user.role as UserRole);
     if (!hasAllowedRole) {
       router.replace(redirectTo);
+    } else {
+      setAuthorized(true);
     }
-  }, [loggedIn, user, allowedRoles, redirectTo, router]);
+
+    setAuthChecked(true);
+  }, [allowedRoles, redirectTo, router, authChecked]);
 
   // Show nothing while checking auth state to avoid flashes of content
-  if (!loggedIn || (allowedRoles.length > 0 && !user?.role)) {
+  if (!authorized) {
     return null;
   }
 

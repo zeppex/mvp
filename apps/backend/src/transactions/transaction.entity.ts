@@ -12,6 +12,7 @@ import { Pos } from '../merchant/entities/pos.entity';
 import { PaymentOrder } from '../merchant/entities/payment-order.entity';
 import { Tenant } from '../tenant/entities/tenant.entity';
 
+//TODO agregar userID, fechas, tipado de datos
 @Entity('transactions')
 export class Transaction {
   @PrimaryColumn('uuid')
@@ -66,6 +67,10 @@ export class Transaction {
 
   @Column('uuid', { nullable: false })
   tenantId: string;
+
+  
+  userId: string;
+
 
   @BeforeInsert()
   generateId() {

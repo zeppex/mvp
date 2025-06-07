@@ -8,7 +8,7 @@ import { serverSideRefreshToken } from '@/lib/server-auth';
  */
 export async function POST() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const refreshToken = cookieStore.get('refreshToken')?.value;
     
     if (!refreshToken) {

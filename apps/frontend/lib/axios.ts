@@ -1,12 +1,9 @@
 // HTTP interceptor to handle auth errors
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import { 
-  getAccessToken, 
-  logout, 
-  refreshToken, 
-  isTokenExpiringSoon, 
-  isTokenExpired 
-} from "./auth";
+import { getToken } from "next-auth/jwt";
+
+// NextAuth will handle token refreshing automatically
+// This file is now simplified to work with Next Auth
 
 // Create axios instance
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
@@ -19,36 +16,29 @@ export const apiClient = axios.create({
   withCredentials: true, // Important for sending/receiving cookies in CORS requests
 });
 
-// Flag to prevent multiple refresh requests
-let isRefreshing = false;
-// Array of callbacks to be executed after token refresh
-let refreshSubscribers: Array<(token: string | null) => void> = [];
-
-/**
- * Execute all subscribers when a new token is obtained
- */
-function onRefreshed(token: string | null) {
-  refreshSubscribers.forEach((callback) => callback(token));
-  refreshSubscribers = [];
-}
-
-/**
- * Add subscriber to queue that will be executed when token is refreshed
- */
-function addSubscriber(callback: (token: string | null) => void) {
-  refreshSubscribers.push(callback);
-}
-
-// Request interceptor to add auth token
+// Request interceptor to add auth token from Next Auth
+// Server-side usage will get token from the session directly
 apiClient.interceptors.request.use(
   async (config) => {
-    // Skip token handling for refresh token requests
-    if (config.url?.includes('/auth/refresh')) {
-      return config;
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      try {
+        // Get the token from the session cookie (handled by Next Auth)
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+        
+        if (session && session.accessToken) {
+          config.headers.Authorization = `Bearer ${session.accessToken}`;
+        }
+      } catch (error) {
+        console.error("Error getting session:", error);
+      }
     }
     
-    // Skip token handling for login requests
-    if (config.url?.includes('/auth/login')) {
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
       return config;
     }
     

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { isLoggedIn, getCurrentUser } from "@/lib/auth";
-import { UserRole } from "@/types/enums";
+import { UserRole } from "@/lib/user-api";
 
 interface WithAuthProps {
   requiredRoles?: UserRole[];
@@ -23,40 +23,39 @@ export function withAuth<P extends object>(
 
   return function AuthenticatedComponent(props: P) {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
+    const [isAuthorized, setIsAuthorized] = useState(true);
 
     useEffect(() => {
-      // Check if user is authenticated
+      console.log("Component mounted");
+      setMounted(true);
+
       if (!isLoggedIn()) {
+        console.log("User not logged in, redirecting...");
+        setIsAuthorized(false);
         router.replace(loginUrl);
         return;
       }
 
-      // Check if user has required role
       if (requiredRoles.length > 0) {
         const user = getCurrentUser();
         if (!user || !requiredRoles.includes(user.role as UserRole)) {
+          console.log("User does not have required role, redirecting...");
+          setIsAuthorized(false);
           router.replace(loginUrl);
           return;
         }
       }
 
-      // User is authenticated and authorized
-      setIsAuthorized(true);
-      setLoading(false);
+      console.log("User is authorized");
     }, [router]);
 
-    // Show loading state while checking auth
-    if (loading) {
-      return (
-        <div className="flex h-screen w-screen items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-        </div>
-      );
+    if (!mounted || !isAuthorized) {
+      console.log("Rendering null due to mounted or isAuthorized state");
+      return null;
     }
 
-    // Only render the component if user is authorized
-    return isAuthorized ? <Component {...props} /> : null;
+    console.log("Rendering component");
+    return <Component {...props} />;
   };
 }

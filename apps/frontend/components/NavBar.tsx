@@ -13,11 +13,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 export function NavBar() {
-  const { user, authenticated, logout } = useAuth();
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const isMounted = true; // Next Auth handles loading state
+
+  // Default navigation links, always show these
+  const renderNavLinks = () => (
+    <nav className="hidden flex-1 items-center gap-6 text-sm md:flex">
+      <Link
+        href="/"
+        className="font-medium transition-colors hover:text-foreground/80"
+      >
+        Home
+      </Link>
+      <Link
+        href="/merchant/dashboard"
+        className="font-medium transition-colors hover:text-foreground/80"
+      >
+        Merchant Portal
+      </Link>
+      <Link
+        href="/admin/dashboard"
+        className="font-medium transition-colors hover:text-foreground/80"
+      >
+        Admin Portal
+      </Link>
+      <Link
+        href="/admin/tenants"
+        className="font-medium transition-colors hover:text-foreground/80"
+      >
+        Tenant Management
+      </Link>
+    </nav>
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background">
@@ -27,33 +59,25 @@ export function NavBar() {
             Zeppex
           </span>
         </Link>
-        <nav className="hidden flex-1 items-center gap-6 text-sm md:flex">
-          <Link
-            href="/"
-            className="font-medium transition-colors hover:text-foreground/80"
-          >
-            Home
-          </Link>
-          <Link
-            href="/merchant/dashboard"
-            className="font-medium transition-colors hover:text-foreground/80"
-          >
-            Merchant Portal
-          </Link>
-          <Link
-            href="/admin/dashboard"
-            className="font-medium transition-colors hover:text-foreground/80"
-          >
-            Admin Portal
-          </Link>
-        </nav>
+        {renderNavLinks()}
         <div className="ml-auto flex items-center gap-2">
-          {authenticated ? (
-            <UserNav user={user} onLogout={logout} />
+          {/* Show authentication UI based on session status */}
+          {isMounted && isAuthenticated ? (
+            <UserNav
+              user={{
+                id: session?.user.id || "",
+                email: session?.user.email || "",
+                firstName: session?.user.firstName || "",
+                lastName: session?.user.lastName || "",
+                role: session?.user.role || "",
+                isActive: session?.user.isActive || false,
+              }}
+              onLogout={() => signOut({ callbackUrl: "/" })}
+            />
           ) : (
             <>
               <Button variant="ghost" asChild>
-                <Link href="/merchant/login">Log in</Link>
+                <Link href="/admin/login">Log in</Link>
               </Button>
               <Button asChild>
                 <Link href="/contact">Contact Us</Link>
@@ -66,23 +90,40 @@ export function NavBar() {
   );
 }
 
-function UserNav({ user, onLogout }: { user: any; onLogout: () => void }) {
+function UserNav({
+  user,
+  onLogout,
+}: {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    isActive: boolean;
+  };
+  onLogout: () => void;
+}) {
   const initials =
     user?.firstName && user?.lastName
-      ? `${user.firstName[0]}${user.lastName[0]}`
-      : user?.email?.substring(0, 2).toUpperCase() || "ZX";
+      ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
+      : user?.email?.substring(0, 2).toUpperCase() || "U";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+        <Button
+          variant="ghost"
+          className="relative h-8 w-8 rounded-full"
+          aria-label="User menu"
+        >
+          <Avatar className="h-8 w-8">
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel>
+        <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
               {user?.firstName} {user?.lastName}
@@ -90,12 +131,15 @@ function UserNav({ user, onLogout }: { user: any; onLogout: () => void }) {
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email}
             </p>
+            <p className="text-xs leading-none text-muted-foreground mt-1">
+              Role: {user?.role}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
+            <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
           <DropdownMenuItem>

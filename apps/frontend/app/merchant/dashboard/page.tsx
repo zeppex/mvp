@@ -18,37 +18,35 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { AuthGuard } from "@/components/AuthGuard";
 import { UserRole } from "@/types/enums";
-import { getCurrentUser } from "@/lib/auth";
+import { withNextAuth } from "@/components/withNextAuth";
+import { useSession } from "next-auth/react";
 import AuthTester from "@/components/auth/AuthTester";
 
-// Wrapper component with AuthGuard
-export default function MerchantDashboard() {
-  const allowedRoles = [
+// Define the merchant dashboard with withNextAuth HOC
+const MerchantDashboard = withNextAuth(DashboardContent, {
+  requiredRoles: [
     UserRole.TENANT_ADMIN,
     UserRole.MERCHANT_ADMIN,
     UserRole.BRANCH_ADMIN,
     UserRole.POS_USER,
-  ];
+  ],
+  loginUrl: "/merchant/login",
+});
 
-  return (
-    <AuthGuard allowedRoles={allowedRoles} redirectTo="/merchant/login">
-      <DashboardContent />
-    </AuthGuard>
-  );
-}
+// Export default MerchantDashboard
+export default MerchantDashboard;
 
 // Inner content component
 function DashboardContent() {
-  const user = getCurrentUser();
+  const { data: session } = useSession();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            Welcome back, {user?.firstName || "Merchant"}
+            Welcome back, {session?.user.firstName || "Merchant"}
           </h2>
           <p className="text-muted-foreground">
             Here&apos;s an overview of your payment activity
@@ -329,7 +327,7 @@ function DashboardContent() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* Auth Tester for development and testing */}
       <div className="pt-8 border-t">
         <h3 className="text-lg font-semibold mb-4">Auth System Tester</h3>

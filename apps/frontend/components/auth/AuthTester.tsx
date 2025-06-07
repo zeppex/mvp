@@ -3,71 +3,70 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from '@/hooks/useAuth';
-import { isTokenExpiringSoon, refreshToken } from '@/lib/auth';
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import api from '@/lib/axios';
+import { useSession } from "next-auth/react";
 
 export default function AuthTester() {
-  const { user, authenticated, logout } = useAuth();
+  const { user, authenticated, logout } = useCurrentUser();
+  const { data: session, update: updateSession } = useSession();
   const [status, setStatus] = useState("");
-  const [tokenData, setTokenData] = useState<{expires?: string, accessToken?: string}>({});
-  
+  const [tokenData, setTokenData] = useState<{
+    expires?: string;
+    accessToken?: string;
+  }>({});
+
   // Check token status
   useEffect(() => {
     if (authenticated) {
-      const expiringSoon = isTokenExpiringSoon();
-      const expiryTime = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('tokenExpiry='))
-        ?.split('=')[1];
-      
-      if (expiryTime) {
-        const expires = new Date(Number(expiryTime)).toLocaleTimeString();
+      // With Next Auth, token handling is automatic
+      // We can still check the session expiry if needed
+      if (session?.expires) {
+        const expires = new Date(session.expires).toLocaleTimeString();
         setTokenData({ expires });
+
+        // Check if token will expire in the next 5 minutes
+        const expiresDate = new Date(session.expires);
+        const now = new Date();
+        const diffMinutes = Math.floor(
+          (expiresDate.getTime() - now.getTime()) / (1000 * 60)
+        );
+
+        setStatus(diffMinutes < 5 ? "Token expiring soon" : "Token valid");
       }
-      
-      setStatus(expiringSoon ? "Token expiring soon" : "Token valid");
     } else {
       setStatus("Not authenticated");
     }
-  }, [authenticated]);
+  }, [authenticated, session]);
 
   // Function to test an authenticated API call
   const testApiCall = async () => {
     try {
       setStatus("Making API call...");
-      const response = await api.get('/user/profile');
+      const response = await api.get("/user/profile");
       setStatus(`API call successful: ${JSON.stringify(response.data)}`);
-    } catch (error) {
-      console.error('API call error', error);
-      setStatus(`API call failed: ${error.message}`);
+    } catch (error: any) {
+      console.error("API call error", error);
+      setStatus(`API call failed: ${error?.message || "Unknown error"}`);
     }
   };
 
-  // Function to manually refresh tokens
+  // Function to manually refresh the session
   const handleRefreshToken = async () => {
     try {
-      setStatus("Refreshing token...");
-      const response = await refreshToken();
-      
-      if (response && response.success) {
-        const expiryTime = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('tokenExpiry='))
-          ?.split('=')[1];
-        
-        if (expiryTime) {
-          const expires = new Date(Number(expiryTime)).toLocaleTimeString();
-          setTokenData({ expires });
-        }
-        
-        setStatus("Token refreshed successfully");
+      setStatus("Refreshing session...");
+      await updateSession();
+
+      if (session?.expires) {
+        const expires = new Date(session.expires).toLocaleTimeString();
+        setTokenData({ expires });
+        setStatus("Session refreshed successfully");
       } else {
-        setStatus("Token refresh failed");
+        setStatus("Session refresh failed");
       }
-    } catch (error) {
-      console.error('Token refresh error', error);
-      setStatus(`Token refresh failed: ${error.message}`);
+    } catch (error: any) {
+      console.error("Session refresh error", error);
+      setStatus(`Session refresh failed: ${error?.message || "Unknown error"}`);
     }
   };
 

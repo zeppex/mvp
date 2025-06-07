@@ -19,11 +19,11 @@ interface RefreshTokenResponse {
 /**
  * Get tokens from cookies on the server-side
  */
-export function getServerSideTokens() {
-  const cookieStore = cookies();
-  const accessToken = cookieStore.get('accessToken')?.value;
-  const refreshToken = cookieStore.get('refreshToken')?.value;
-  
+export async function getServerSideTokens() {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("accessToken")?.value;
+  const refreshToken = cookieStore.get("refreshToken")?.value;
+
   return { accessToken, refreshToken };
 }
 
@@ -31,7 +31,7 @@ export function getServerSideTokens() {
  * Get current user from cookies on server-side
  */
 export async function getServerSideUser() {
-  const { accessToken, refreshToken } = getServerSideTokens();
+  const { accessToken, refreshToken } = await getServerSideTokens();
   
   if (!accessToken || !refreshToken) {
     return null;
