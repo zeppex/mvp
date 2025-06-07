@@ -25,7 +25,7 @@ export class MerchantService {
   ): Promise<Merchant> {
     const merchant = await this.merchantRepository.create({
       ...createMerchantDto,
-      tenantId,
+      tenant: { id: tenantId } as any,
     });
     const savedMerchant = await this.merchantRepository.save(merchant);
 
@@ -40,13 +40,21 @@ export class MerchantService {
   }
 
   async findOne(id: string): Promise<Merchant> {
-    const merchant = await this.merchantRepository.findOne({ where: { id } });
+    const merchant = await this.merchantRepository.findOne({
+      where: { id },
+      relations: ['tenant'],
+    });
     if (!merchant) throw new NotFoundException(`Merchant ${id} not found`);
     return merchant;
   }
 
   async findByTenant(tenantId: string): Promise<Merchant[]> {
-    return this.merchantRepository.find({ where: { tenantId } });
+    return this.merchantRepository.find({
+      where: {
+        tenant: { id: tenantId },
+      },
+      relations: ['tenant'],
+    });
   }
 
   async remove(id: string): Promise<void> {

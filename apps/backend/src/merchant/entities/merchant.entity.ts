@@ -36,9 +36,6 @@ export class Merchant {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column('uuid')
-  tenantId: string;
-
   @OneToMany(() => Branch, (branch) => branch.merchant, { cascade: true })
   branches: Branch[];
 

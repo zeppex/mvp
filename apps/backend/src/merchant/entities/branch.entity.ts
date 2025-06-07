@@ -30,9 +30,6 @@ export class Branch {
   @ManyToOne(() => Merchant, (merchant) => merchant.branches)
   merchant: Merchant;
 
-  @Column('uuid')
-  merchantId: string;
-
   @OneToMany(() => Pos, (pos) => pos.branch)
   pos: Pos[];
 

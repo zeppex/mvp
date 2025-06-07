@@ -57,7 +57,7 @@ export class UserController {
     // TENANT_ADMIN can only see users from their own tenant
     if (
       req.user.role === UserRole.TENANT_ADMIN &&
-      user.tenantId !== req.user.tenantId
+      user.tenant?.id !== req.user.tenantId
     ) {
       throw new ForbiddenException(
         'You cannot access users from other tenants',
@@ -84,7 +84,7 @@ export class UserController {
 
     // TENANT_ADMIN can only delete users from their own tenant
     if (req.user.role === UserRole.TENANT_ADMIN) {
-      if (user.tenantId !== req.user.tenantId) {
+      if (user.tenant?.id !== req.user.tenantId) {
         throw new ForbiddenException(
           'You cannot delete users from other tenants',
         );

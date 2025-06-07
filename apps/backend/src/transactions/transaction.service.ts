@@ -32,7 +32,7 @@ export class TransactionService {
     const merchant = await this.merchantService.findOne(merchantId);
 
     // If tenantId is provided, verify access
-    if (tenantId && merchant.tenantId !== tenantId) {
+    if (tenantId && merchant.tenant?.id !== tenantId) {
       throw new ForbiddenException('You do not have access to this merchant');
     }
 
@@ -41,11 +41,11 @@ export class TransactionService {
 
     const transaction = this.transactionRepository.create({
       ...rest,
-      merchantId,
-      branchId,
-      posId,
-      // Set the tenant ID from the merchant
-      tenantId: merchant.tenantId,
+      merchant: { id: merchantId } as any,
+      branch: { id: branchId } as any,
+      pos: { id: posId } as any,
+      // Set the tenant from the merchant
+      tenant: { id: merchant.tenant?.id } as any,
     });
 
     return this.transactionRepository.save(transaction);
@@ -55,24 +55,26 @@ export class TransactionService {
     // If a tenantId is provided, only return transactions for that tenant
     if (tenantId) {
       return this.transactionRepository.find({
-        where: { tenantId },
-        relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
+        where: {
+          tenant: { id: tenantId },
+        },
+        relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
       });
     }
 
     // Otherwise return all transactions (admin access)
     return this.transactionRepository.find({
-      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
     });
   }
 
   async findOne(id: UUID, tenantId?: UUID): Promise<Transaction> {
     // Create the where condition based on whether tenantId is provided
-    const where = tenantId ? { id, tenantId } : { id };
+    const where = tenantId ? { id, tenant: { id: tenantId } } : { id };
 
     const transaction = await this.transactionRepository.findOne({
       where,
-      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
     });
 
     if (!transaction) {
@@ -86,7 +88,7 @@ export class TransactionService {
     // If tenantId is provided, verify the transaction belongs to that tenant
     if (tenantId) {
       const transaction = await this.findOne(id, tenantId);
-      if (transaction.tenantId !== tenantId) {
+      if (transaction.tenant?.id !== tenantId) {
         throw new ForbiddenException(
           'You do not have access to this transaction',
         );

@@ -32,7 +32,7 @@ export class PaymentOrderService {
     const branch = await this.branchService.findOne(merchantId, branchId);
 
     // If tenantId is provided, verify access
-    if (tenantId && branch.merchant.tenantId !== tenantId) {
+    if (tenantId && branch.merchant.tenant?.id !== tenantId) {
       throw new ForbiddenException('You do not have access to this merchant');
     }
 
@@ -41,8 +41,8 @@ export class PaymentOrderService {
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
-    order.branchId = branchId;
-    order.posId = posId;
+    order.branch = { id: branchId } as any;
+    order.pos = { id: posId } as any;
     order.status = createDto.status ?? PaymentOrderStatus.ACTIVE;
 
     return this.orderRepository.save(order);
@@ -55,7 +55,12 @@ export class PaymentOrderService {
   ): Promise<PaymentOrder[]> {
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);
-    return this.orderRepository.find({ where: { posId } });
+    return this.orderRepository.find({
+      where: {
+        pos: { id: posId },
+      },
+      relations: ['pos'],
+    });
   }
 
   async findOne(
@@ -66,7 +71,13 @@ export class PaymentOrderService {
   ): Promise<PaymentOrder> {
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);
-    const order = await this.orderRepository.findOne({ where: { id, posId } });
+    const order = await this.orderRepository.findOne({
+      where: {
+        id,
+        pos: { id: posId },
+      },
+      relations: ['pos'],
+    });
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
     return order;
   }
@@ -79,7 +90,10 @@ export class PaymentOrderService {
   ): Promise<void> {
     await this.branchService.findOne(merchantId, branchId);
     await this.posService.findOne(merchantId, branchId, posId);
-    const result = await this.orderRepository.delete({ id, posId });
+    const result = await this.orderRepository.delete({
+      id,
+      pos: { id: posId },
+    });
     if (result.affected === 0)
       throw new NotFoundException(`PaymentOrder ${id} not found`);
   }
@@ -93,8 +107,11 @@ export class PaymentOrderService {
     await this.posService.findOne(merchantId, branchId, posId);
 
     const order = await this.orderRepository.findOne({
-      where: { posId },
+      where: {
+        pos: { id: posId },
+      },
       order: { createdAt: 'DESC' },
+      relations: ['pos'],
     });
     if (!order || order.status !== PaymentOrderStatus.ACTIVE) {
       throw new NotFoundException(`No active order for pos: ${posId}`);
@@ -127,6 +144,6 @@ export class PaymentOrderService {
       throw new NotFoundException(`Payment order ${orderId} not found`);
     }
 
-    return order.branch.merchant.tenantId === tenantId;
+    return order.branch.merchant.tenant?.id === tenantId;
   }
 }

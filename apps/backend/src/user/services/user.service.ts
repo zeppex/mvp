@@ -45,8 +45,13 @@ export class UserService {
       
       // TENANT_ADMIN can only create users for their own tenant
       if (currentUser.role === UserRole.TENANT_ADMIN) {
-        if (!createUserDto.tenantId || createUserDto.tenantId !== currentUser.tenantId) {
-          throw new ForbiddenException('Tenant admins can only create users for their own tenant');
+        if (
+          !createUserDto.tenantId ||
+          createUserDto.tenantId !== currentUser.tenant?.id
+        ) {
+          throw new ForbiddenException(
+            'Tenant admins can only create users for their own tenant',
+          );
         }
         
         // TENANT_ADMINs cannot create other TENANT_ADMINs
@@ -78,18 +83,27 @@ export class UserService {
     
     // Otherwise, users can only see users in their tenant
     return this.userRepository.find({
-      where: { tenantId: currentUser.tenantId }
+      where: {
+        tenant: { id: currentUser.tenant?.id },
+      },
+      relations: ['tenant'],
     });
   }
 
   async findByTenant(tenantId: string): Promise<User[]> {
     return this.userRepository.find({
-      where: { tenantId },
+      where: {
+        tenant: { id: tenantId },
+      },
+      relations: ['tenant'],
     });
   }
 
   async findOne(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['tenant'],
+    });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -121,7 +135,7 @@ export class UserService {
     if (
       currentUser &&
       currentUser.role !== UserRole.ADMIN &&
-      (user.tenantId !== currentUser.tenantId ||
+      (user.tenant?.id !== currentUser.tenant?.id ||
         currentUser.role !== UserRole.TENANT_ADMIN)
     ) {
       throw new ForbiddenException(

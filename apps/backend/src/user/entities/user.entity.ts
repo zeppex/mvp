@@ -45,9 +45,6 @@ export class User {
   @ManyToOne(() => Tenant, { nullable: true })
   tenant: Tenant;
 
-  @Column('uuid', { nullable: true })
-  tenantId: string;
-
   @CreateDateColumn()
   createdAt: Date;
 

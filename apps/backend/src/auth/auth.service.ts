@@ -31,13 +31,13 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
-      tenantId: user.tenantId,
+      tenantId: user.tenant?.id,
     };
 
     // Generate access token and refresh token
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.generateRefreshToken(user.id);
-    
+
     return {
       user: {
         id: user.id,
@@ -45,7 +45,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        tenantId: user.tenantId,
+        tenantId: user.tenant?.id,
       },
       accessToken,
       refreshToken,
@@ -76,16 +76,16 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
-      tenantId: user.tenantId,
+      tenantId: user.tenant?.id,
     };
-    
+
     // Generate new access token and refresh token
     const newAccessToken = this.jwtService.sign(payload);
     const newRefreshToken = this.generateRefreshToken(user.id);
-    
+
     // Remove the old refresh token
     this.refreshTokens.delete(refreshToken);
-    
+
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
@@ -95,7 +95,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        tenantId: user.tenantId,
+        tenantId: user.tenant?.id,
       },
     };
   }

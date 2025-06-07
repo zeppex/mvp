@@ -30,28 +30,16 @@ export class Transaction {
   @ManyToOne(() => Merchant, { nullable: false })
   merchant: Merchant;
 
-  @Column('uuid')
-  merchantId: string;
-
   @ManyToOne(() => Branch, { nullable: false })
   branch: Branch;
 
-  @Column('uuid')
-  branchId: string;
-
   @ManyToOne(() => Pos, { nullable: false })
   pos: Pos;
-
-  @Column('uuid')
-  posId: string;
 
   @ManyToOne(() => PaymentOrder, (order) => order.transactions, {
     nullable: true,
   })
   paymentOrder: PaymentOrder;
-
-  @Column('uuid', { nullable: true })
-  paymentOrderId: string;
 
   @Column('decimal', { precision: 18, scale: 8 })
   amount: string;
@@ -65,12 +53,8 @@ export class Transaction {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column('uuid', { nullable: false })
-  tenantId: string;
-
-  
+  @Column('uuid', { nullable: true })
   userId: string;
-
 
   @BeforeInsert()
   generateId() {

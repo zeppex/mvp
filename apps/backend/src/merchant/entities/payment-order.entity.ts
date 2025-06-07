@@ -35,14 +35,8 @@ export class PaymentOrder {
   @ManyToOne(() => Branch, { nullable: false })
   branch: Branch;
 
-  @Column('uuid')
-  branchId: string;
-
   @ManyToOne(() => Pos, { nullable: false })
   pos: Pos;
-
-  @Column('uuid')
-  posId: string;
 
   @OneToMany(() => Transaction, (tx) => tx.paymentOrder)
   transactions: Transaction[];

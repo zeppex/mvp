@@ -22,9 +22,6 @@ export class Pos {
   @ManyToOne(() => Branch, (branch) => branch.pos, { onDelete: 'CASCADE' })
   branch: Branch;
 
-  @Column('uuid')
-  branchId: string;
-
   @BeforeInsert()
   generateId() {
     this.id = uuidv7();

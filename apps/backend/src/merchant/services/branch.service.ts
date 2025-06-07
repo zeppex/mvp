@@ -26,13 +26,13 @@ export class BranchService {
     const merchant = await this.merchantService.findOne(merchantId);
 
     // If tenantId is provided, verify access
-    if (tenantId && merchant.tenantId !== tenantId) {
+    if (tenantId && merchant.tenant?.id !== tenantId) {
       throw new ForbiddenException('You do not have access to this merchant');
     }
 
     const branch = this.branchRepository.create({
       ...createBranchDto,
-      merchantId,
+      merchant: { id: merchantId } as any,
     });
     return this.branchRepository.save(branch);
   }
@@ -41,13 +41,15 @@ export class BranchService {
     // If tenantId is provided, verify tenant access to this merchant
     if (tenantId) {
       const merchant = await this.merchantService.findOne(merchantId);
-      if (merchant.tenantId !== tenantId) {
+      if (merchant.tenant?.id !== tenantId) {
         throw new ForbiddenException('You do not have access to this merchant');
       }
     }
 
     return this.branchRepository.find({
-      where: { merchantId },
+      where: {
+        merchant: { id: merchantId },
+      },
       relations: ['merchant'],
     });
   }
@@ -60,7 +62,7 @@ export class BranchService {
     const queryOptions: any = { where: { id } };
 
     if (merchantId) {
-      queryOptions.where.merchantId = merchantId;
+      queryOptions.where.merchant = { id: merchantId };
     }
 
     queryOptions.relations = ['merchant'];
@@ -72,7 +74,7 @@ export class BranchService {
     }
 
     // If tenantId is provided, verify tenant access
-    if (tenantId && branch.merchant.tenantId !== tenantId) {
+    if (tenantId && branch.merchant.tenant?.id !== tenantId) {
       throw new ForbiddenException('You do not have access to this branch');
     }
 
@@ -99,7 +101,7 @@ export class BranchService {
     tenantId: string,
   ): Promise<boolean> {
     const merchant = await this.merchantService.findOne(merchantId);
-    return merchant.tenantId === tenantId;
+    return merchant.tenant?.id === tenantId;
   }
 
   /**
@@ -110,6 +112,6 @@ export class BranchService {
     tenantId: string,
   ): Promise<boolean> {
     const branch = await this.findOne(branchId);
-    return branch.merchant.tenantId === tenantId;
+    return branch.merchant.tenant?.id === tenantId;
   }
 }

@@ -106,8 +106,10 @@ export class MerchantController {
     
     // If user is not SUPERADMIN or ADMIN, check tenant access
     if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
-      if (merchant.tenantId !== req.user.tenantId) {
-        throw new ForbiddenException('You can only access merchants from your own tenant');
+      if (merchant.tenant?.id !== req.user.tenantId) {
+        throw new ForbiddenException(
+          'You can only access merchants from your own tenant',
+        );
       }
     }
     
@@ -130,8 +132,10 @@ export class MerchantController {
     
     // If user is not SUPERADMIN or ADMIN, check tenant access
     if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
-      if (merchant.tenantId !== req.user.tenantId) {
-        throw new ForbiddenException('You can only delete merchants from your own tenant');
+      if (merchant.tenant?.id !== req.user.tenantId) {
+        throw new ForbiddenException(
+          'You can only delete merchants from your own tenant',
+        );
       }
     }
     
