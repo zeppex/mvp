@@ -30,9 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import userApi, { CreateUserDto, UpdateUserDto } from "@/lib/user-api";
+import userApi, { User, CreateUserDto, UpdateUserDto } from "@/lib/user-api";
 import { UserRole } from "@/types/enums";
-import merchantApi, { Merchant, Branch, Pos } from "@/lib/merchant-api";
+import merchantApi from "@/lib/merchant-api";
 import { withNextAuth } from "@/components/withNextAuth";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -84,9 +84,9 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
   const isEditing = !!userId;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [posDevices, setPosDevices] = useState<Pos[]>([]);
+  const [merchants, setMerchants] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [posDevices, setPosDevices] = useState<any[]>([]);
 
   const formSchema = isEditing ? updateUserSchema : createUserSchema;
 
@@ -104,68 +104,6 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
     },
   });
 
-  const watchedMerchantId = form.watch("merchantId");
-  const watchedBranchId = form.watch("branchId");
-  const watchedRole = form.watch("role");
-
-  // Load merchants for SUPERADMIN
-  useEffect(() => {
-    const fetchMerchants = async () => {
-      if (currentUser?.role === UserRole.SUPERADMIN) {
-        try {
-          const merchantsData = await merchantApi.getAllMerchants();
-          setMerchants(merchantsData);
-        } catch (err) {
-          console.error("Error fetching merchants:", err);
-        }
-      }
-    };
-
-    fetchMerchants();
-  }, [currentUser]);
-
-  // Load branches when merchant changes
-  useEffect(() => {
-    const fetchBranches = async () => {
-      if (watchedMerchantId) {
-        try {
-          const branchesData = await merchantApi.getAllBranches(
-            watchedMerchantId
-          );
-          setBranches(branchesData);
-        } catch (err) {
-          console.error("Error fetching branches:", err);
-        }
-      } else {
-        setBranches([]);
-      }
-    };
-
-    fetchBranches();
-  }, [watchedMerchantId]);
-
-  // Load POS devices when branch changes
-  useEffect(() => {
-    const fetchPosDevices = async () => {
-      if (watchedMerchantId && watchedBranchId) {
-        try {
-          const posData = await merchantApi.getAllPos(
-            watchedMerchantId,
-            watchedBranchId
-          );
-          setPosDevices(posData);
-        } catch (err) {
-          console.error("Error fetching POS devices:", err);
-        }
-      } else {
-        setPosDevices([]);
-      }
-    };
-
-    fetchPosDevices();
-  }, [watchedMerchantId, watchedBranchId]);
-
-  // Load user data for editing
   useEffect(() => {
     const fetchUser = async () => {
       if (!isEditing) return;
@@ -179,9 +117,6 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
           lastName: user.lastName,
           role: user.role,
           isActive: user.isActive,
-          merchantId: user.merchantId || "",
-          branchId: user.branchId || "",
-          posId: user.posId || "",
         });
       } catch (err) {
         setError("Failed to load user details");
@@ -207,48 +142,18 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
         const createData: CreateUserDto = {
           ...data,
           password: data.password!, // Password is required for creation
+          tenantId: tenantId,
         };
         await userApi.createUser(createData);
       }
 
-      // Navigate back based on context
-      if (merchantId && branchId) {
-        router.push(
-          `/admin/merchants/${merchantId}/branches/${branchId}/users`
-        );
-      } else if (merchantId) {
-        router.push(`/admin/merchants/${merchantId}/users`);
-      } else {
-        router.push("/admin/users");
-      }
+      router.push(`/admin/tenants/${tenantId}/users`);
     } catch (err) {
       setError(`Failed to ${isEditing ? "update" : "create"} user`);
       console.error(`Error ${isEditing ? "updating" : "creating"} user:`, err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getAvailableRoles = () => {
-    const roles = [];
-
-    if (currentUser?.role === UserRole.SUPERADMIN) {
-      roles.push(
-        { value: UserRole.SUPERADMIN, label: "Platform Admin" },
-        { value: UserRole.ADMIN, label: "Merchant Admin" },
-        { value: UserRole.BRANCH_ADMIN, label: "Branch Admin" },
-        { value: UserRole.CASHIER, label: "Cashier" }
-      );
-    } else if (currentUser?.role === UserRole.ADMIN) {
-      roles.push(
-        { value: UserRole.BRANCH_ADMIN, label: "Branch Admin" },
-        { value: UserRole.CASHIER, label: "Cashier" }
-      );
-    } else if (currentUser?.role === UserRole.BRANCH_ADMIN) {
-      roles.push({ value: UserRole.CASHIER, label: "Cashier" });
-    }
-
-    return roles;
   };
 
   return (
@@ -400,11 +305,18 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getAvailableRoles().map((role) => (
-                            <SelectItem key={role.value} value={role.value}>
-                              {role.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value={UserRole.TENANT_ADMIN}>
+                            Tenant Admin
+                          </SelectItem>
+                          <SelectItem value={UserRole.MERCHANT_ADMIN}>
+                            Merchant Admin
+                          </SelectItem>
+                          <SelectItem value={UserRole.BRANCH_ADMIN}>
+                            Branch Admin
+                          </SelectItem>
+                          <SelectItem value={UserRole.POS_USER}>
+                            POS User
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -412,108 +324,6 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
                   </FormItem>
                 )}
               />
-
-              {/* Merchant Selection (only for SUPERADMIN) */}
-              {currentUser?.role === UserRole.SUPERADMIN &&
-                watchedRole !== UserRole.SUPERADMIN && (
-                  <FormField
-                    control={form.control}
-                    name="merchantId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Merchant</FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={loading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a merchant" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {merchants.map((merchant) => (
-                                <SelectItem
-                                  key={merchant.id}
-                                  value={merchant.id}
-                                >
-                                  {merchant.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-              {/* Branch Selection (for BRANCH_ADMIN and CASHIER) */}
-              {[UserRole.BRANCH_ADMIN, UserRole.CASHIER].includes(
-                watchedRole
-              ) && (
-                <FormField
-                  control={form.control}
-                  name="branchId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Branch</FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          disabled={loading || !watchedMerchantId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a branch" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {branches.map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                {branch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* POS Selection (only for CASHIER) */}
-              {watchedRole === UserRole.CASHIER && (
-                <FormField
-                  control={form.control}
-                  name="posId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>POS Device</FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          disabled={loading || !watchedBranchId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a POS device" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {posDevices.map((pos) => (
-                              <SelectItem key={pos.id} value={pos.id}>
-                                {pos.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               <FormField
                 control={form.control}
@@ -540,17 +350,9 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
               <div className="flex justify-end space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    if (merchantId && branchId) {
-                      router.push(
-                        `/admin/merchants/${merchantId}/branches/${branchId}/users`
-                      );
-                    } else if (merchantId) {
-                      router.push(`/admin/merchants/${merchantId}/users`);
-                    } else {
-                      router.push("/admin/users");
-                    }
-                  }}
+                  onClick={() =>
+                    router.push(`/admin/tenants/${tenantId}/users`)
+                  }
                   disabled={loading}
                   type="button"
                 >
@@ -572,4 +374,9 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
   );
 }
 
-export default withNextAuth(UserForm);
+const ProtectedUserForm = withNextAuth(UserForm, {
+  requiredRoles: [UserRole.SUPERADMIN, UserRole.TENANT_ADMIN],
+  loginUrl: "/admin/login",
+});
+
+export default ProtectedUserForm;

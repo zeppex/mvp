@@ -49,10 +49,10 @@ function DashboardContent({
         </div>
         <div className="flex items-center gap-2">
           <Button asChild className="mr-2">
-            <Link href="/admin/dashboard/merchants/new">Add New Merchant</Link>
+            <Link href="/admin/merchants/create">Add New Merchant</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin/tenants">Manage Tenants</Link>
+            <Link href="/admin/merchants">Manage Merchants</Link>
           </Button>
         </div>
       </div>

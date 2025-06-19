@@ -3,10 +3,8 @@ import { apiClient } from "./axios-next-auth";
 export enum UserRole {
   SUPERADMIN = "superadmin",
   ADMIN = "admin",
-  TENANT_ADMIN = "tenant_admin",
-  MERCHANT_ADMIN = "merchant_admin",
   BRANCH_ADMIN = "branch_admin",
-  POS_USER = "pos_user",
+  CASHIER = "cashier",
 }
 
 export interface User {
@@ -16,7 +14,23 @@ export interface User {
   lastName: string;
   role: UserRole;
   isActive: boolean;
-  tenantId?: string;
+  // Merchant-based relationships
+  merchantId?: string;
+  branchId?: string;
+  posId?: string;
+  // Related entities (if included in response)
+  merchant?: {
+    id: string;
+    name: string;
+  };
+  branch?: {
+    id: string;
+    name: string;
+  };
+  pos?: {
+    id: string;
+    name: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,7 +42,10 @@ export interface CreateUserDto {
   lastName: string;
   role: UserRole;
   isActive?: boolean;
-  tenantId?: string;
+  // Merchant-based relationships
+  merchantId?: string;
+  branchId?: string;
+  posId?: string;
 }
 
 export interface UpdateUserDto {
@@ -38,17 +55,40 @@ export interface UpdateUserDto {
   lastName?: string;
   role?: UserRole;
   isActive?: boolean;
-  tenantId?: string;
+  // Merchant-based relationships
+  merchantId?: string;
+  branchId?: string;
+  posId?: string;
 }
 
 const userApi = {
-  getAllUsers: async (): Promise<User[]> => {
-    const response = await apiClient.get("/admin/users");
+  getAllUsers: async (
+    merchantId?: string,
+    branchId?: string
+  ): Promise<User[]> => {
+    let url = "/admin/users";
+    const params = new URLSearchParams();
+
+    if (merchantId) params.append("merchantId", merchantId);
+    if (branchId) params.append("branchId", branchId);
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await apiClient.get(url);
     return response.data;
   },
 
-  getUsersByTenant: async (tenantId: string): Promise<User[]> => {
-    const response = await apiClient.get(`/admin/tenants/${tenantId}/users`);
+  getUsersByMerchant: async (merchantId: string): Promise<User[]> => {
+    const response = await apiClient.get(
+      `/admin/users?merchantId=${merchantId}`
+    );
+    return response.data;
+  },
+
+  getUsersByBranch: async (branchId: string): Promise<User[]> => {
+    const response = await apiClient.get(`/admin/users?branchId=${branchId}`);
     return response.data;
   },
 

@@ -1,6 +1,4 @@
-import { AuthOptions, Session } from "next-auth";
-import { JWT } from "next-auth/jwt";
-import { AdapterUser } from "next-auth/adapters";
+import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { User } from "@/types/user";
 import axios from "axios";
@@ -54,7 +52,9 @@ export const authOptions: AuthOptions = {
             firstName: response.data.user.firstName,
             lastName: response.data.user.lastName,
             role: response.data.user.role,
-            tenantId: response.data.user.tenantId,
+            merchantId: response.data.user.merchantId,
+            branchId: response.data.user.branchId,
+            posId: response.data.user.posId,
             isActive: response.data.user.isActive,
             accessToken: response.data.accessToken,
             refreshToken: response.data.refreshToken,
@@ -88,7 +88,9 @@ export const authOptions: AuthOptions = {
         token.firstName = user.firstName as string;
         token.lastName = user.lastName as string;
         token.role = user.role as string;
-        token.tenantId = user.tenantId as string | undefined;
+        token.merchantId = user.merchantId as string | undefined;
+        token.branchId = user.branchId as string | undefined;
+        token.posId = user.posId as string | undefined;
         token.isActive = user.isActive as boolean;
         token.accessToken = user.accessToken as string;
         token.refreshToken = user.refreshToken as string;
@@ -118,7 +120,9 @@ export const authOptions: AuthOptions = {
               token.firstName = response.data.user.firstName;
               token.lastName = response.data.user.lastName;
               token.role = response.data.user.role;
-              token.tenantId = response.data.user.tenantId;
+              token.merchantId = response.data.user.merchantId;
+              token.branchId = response.data.user.branchId;
+              token.posId = response.data.user.posId;
               token.isActive = response.data.user.isActive;
             }
           }
@@ -141,7 +145,9 @@ export const authOptions: AuthOptions = {
         firstName: token.firstName as string,
         lastName: token.lastName as string,
         role: token.role as string,
-        tenantId: token.tenantId as string | undefined,
+        merchantId: token.merchantId as string | undefined,
+        branchId: token.branchId as string | undefined,
+        posId: token.posId as string | undefined,
         isActive: token.isActive as boolean,
       };
 

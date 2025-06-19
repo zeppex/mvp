@@ -5,7 +5,6 @@ import { getToken } from "next-auth/jwt";
 // Paths that should be protected by authentication
 const protectedPaths = [
   "/admin/dashboard",
-  "/admin/tenants",
   "/merchant/dashboard",
 ];
 

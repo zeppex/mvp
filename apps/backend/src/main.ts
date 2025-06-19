@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   // Enable CORS for frontend requests
@@ -13,14 +14,15 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Apply ValidationPipe globally to validate all incoming requests
+  // Apply global ValidationPipe with simple error logging
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties that don't have decorators
-      forbidNonWhitelisted: true, // Throw an error if non-whitelisted properties are present
-      transform: true, // Transform payloads to be objects typed according to their DTO classes
-      transformOptions: {
-        enableImplicitConversion: true, // Allow implicit type conversions
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      exceptionFactory: (errors) => {
+        console.error(errors);
+        return new BadRequestException(errors);
       },
     }),
   );

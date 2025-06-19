@@ -129,9 +129,7 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
     const fetchBranches = async () => {
       if (watchedMerchantId) {
         try {
-          const branchesData = await merchantApi.getAllBranches(
-            watchedMerchantId
-          );
+          const branchesData = await merchantApi.getAllBranches(watchedMerchantId);
           setBranches(branchesData);
         } catch (err) {
           console.error("Error fetching branches:", err);
@@ -149,10 +147,7 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
     const fetchPosDevices = async () => {
       if (watchedMerchantId && watchedBranchId) {
         try {
-          const posData = await merchantApi.getAllPos(
-            watchedMerchantId,
-            watchedBranchId
-          );
+          const posData = await merchantApi.getAllPos(watchedMerchantId, watchedBranchId);
           setPosDevices(posData);
         } catch (err) {
           console.error("Error fetching POS devices:", err);
@@ -213,9 +208,7 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
 
       // Navigate back based on context
       if (merchantId && branchId) {
-        router.push(
-          `/admin/merchants/${merchantId}/branches/${branchId}/users`
-        );
+        router.push(`/admin/merchants/${merchantId}/branches/${branchId}/users`);
       } else if (merchantId) {
         router.push(`/admin/merchants/${merchantId}/users`);
       } else {
@@ -231,7 +224,7 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
 
   const getAvailableRoles = () => {
     const roles = [];
-
+    
     if (currentUser?.role === UserRole.SUPERADMIN) {
       roles.push(
         { value: UserRole.SUPERADMIN, label: "Platform Admin" },
@@ -245,9 +238,11 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
         { value: UserRole.CASHIER, label: "Cashier" }
       );
     } else if (currentUser?.role === UserRole.BRANCH_ADMIN) {
-      roles.push({ value: UserRole.CASHIER, label: "Cashier" });
+      roles.push(
+        { value: UserRole.CASHIER, label: "Cashier" }
+      );
     }
-
+    
     return roles;
   };
 
@@ -414,45 +409,39 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
               />
 
               {/* Merchant Selection (only for SUPERADMIN) */}
-              {currentUser?.role === UserRole.SUPERADMIN &&
-                watchedRole !== UserRole.SUPERADMIN && (
-                  <FormField
-                    control={form.control}
-                    name="merchantId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Merchant</FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={loading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a merchant" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {merchants.map((merchant) => (
-                                <SelectItem
-                                  key={merchant.id}
-                                  value={merchant.id}
-                                >
-                                  {merchant.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+              {currentUser?.role === UserRole.SUPERADMIN && watchedRole !== UserRole.SUPERADMIN && (
+                <FormField
+                  control={form.control}
+                  name="merchantId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Merchant</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={loading}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a merchant" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {merchants.map((merchant) => (
+                              <SelectItem key={merchant.id} value={merchant.id}>
+                                {merchant.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Branch Selection (for BRANCH_ADMIN and CASHIER) */}
-              {[UserRole.BRANCH_ADMIN, UserRole.CASHIER].includes(
-                watchedRole
-              ) && (
+              {[UserRole.BRANCH_ADMIN, UserRole.CASHIER].includes(watchedRole) && (
                 <FormField
                   control={form.control}
                   name="branchId"
@@ -542,9 +531,7 @@ function UserForm({ userId, merchantId, branchId }: UserFormProps) {
                   variant="outline"
                   onClick={() => {
                     if (merchantId && branchId) {
-                      router.push(
-                        `/admin/merchants/${merchantId}/branches/${branchId}/users`
-                      );
+                      router.push(`/admin/merchants/${merchantId}/branches/${branchId}/users`);
                     } else if (merchantId) {
                       router.push(`/admin/merchants/${merchantId}/users`);
                     } else {

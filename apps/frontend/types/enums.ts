@@ -1,9 +1,7 @@
-// Enum types matching the backend
+// Enum types matching the backend merchant-based architecture
 export enum UserRole {
-  SUPERADMIN = "superadmin",
-  ADMIN = "admin",
-  TENANT_ADMIN = "tenant_admin",
-  MERCHANT_ADMIN = "merchant_admin",
-  BRANCH_ADMIN = "branch_admin",
-  POS_USER = "pos_user",
+  SUPERADMIN = "superadmin", // Platform super admin - can create merchants
+  ADMIN = "admin", // Merchant admin - can manage entire merchant
+  BRANCH_ADMIN = "branch_admin", // Branch admin - can manage specific branch
+  CASHIER = "cashier", // POS user - can only create payment orders for specific PoS
 }

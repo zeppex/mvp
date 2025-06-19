@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { MerchantService } from '../services/merchant.service';
 import { CreateMerchantDto } from '../dto/create-merchant.dto';
@@ -31,6 +32,8 @@ import { UserRole } from '../../user/entities/user.entity';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('merchants')
 export class MerchantController {
+  private readonly logger = new Logger(MerchantController.name);
+
   constructor(private readonly merchantService: MerchantService) {}
 
   @Post()
@@ -46,8 +49,26 @@ export class MerchantController {
     @Body() createMerchantDto: CreateMerchantDto,
     @Request() req,
   ): Promise<Merchant> {
-    // Only SUPERADMIN can create merchants
-    return this.merchantService.create(createMerchantDto);
+    this.logger.log('🏪 Creating new merchant...');
+    this.logger.debug(
+      '📋 Received DTO:',
+      JSON.stringify(createMerchantDto, null, 2),
+    );
+    this.logger.debug('👤 Requested by user:', req.user?.id);
+    this.logger.debug('🔐 User role:', req.user?.role);
+
+    try {
+      const result = await this.merchantService.create(createMerchantDto);
+      this.logger.log('✅ Merchant created successfully with ID:', result.id);
+      return result;
+    } catch (error) {
+      this.logger.error('❌ Failed to create merchant:', error.message);
+      this.logger.error(
+        '🔍 DTO that caused error:',
+        JSON.stringify(createMerchantDto, null, 2),
+      );
+      throw error;
+    }
   }
 
   @Get()

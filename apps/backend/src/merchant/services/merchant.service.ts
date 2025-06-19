@@ -20,6 +20,11 @@ export class MerchantService {
   ) {}
 
   async create(createMerchantDto: CreateMerchantDto): Promise<Merchant> {
+    this.logger.log(
+      `Creating merchant with name ${createMerchantDto.name}`);
+    try{
+    this.logger.log(
+      `Creating merchant with name ${createMerchantDto.name} - Email: ${createMerchantDto.contact}`);
     const merchant = await this.merchantRepository.create({
       ...createMerchantDto,
     });
@@ -29,10 +34,21 @@ export class MerchantService {
       `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id}`,
     );
     return savedMerchant;
+    }
+    catch (error) {
+      this.logger.error(
+        `Failed to create merchant: ${error.message}`,
+        error.stack,
+      );
+      throw new ForbiddenException('Failed to create merchant');
+    }
   }
 
   async findAll(): Promise<Merchant[]> {
-    return this.merchantRepository.find();
+    const merchants = await this.merchantRepository.find();
+    this.logger.log(`Retrieving all merchants - Count: ${merchants.length}`);
+    this.logger.debug(merchants);
+    return merchants;
   }
 
   async findOne(id: string): Promise<Merchant> {

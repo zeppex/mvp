@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -43,10 +42,10 @@ export function NavBar() {
         Admin Portal
       </Link>
       <Link
-        href="/admin/tenants"
+        href="/admin/merchants"
         className="font-medium transition-colors hover:text-foreground/80"
       >
-        Tenant Management
+        Merchant Management
       </Link>
     </nav>
   );

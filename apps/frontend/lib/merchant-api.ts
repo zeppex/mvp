@@ -9,10 +9,6 @@ export interface Merchant {
   contactPhone: string;
   binanceId?: string;
   isActive: boolean;
-  tenant: {
-    id: string;
-    name: string;
-  };
   branches?: Branch[];
   createdAt: Date;
   updatedAt: Date;
@@ -53,7 +49,7 @@ export interface CreateMerchantDto {
   contact: string;
   contactName: string;
   contactPhone: string;
-  tenantId?: string; // For super admin to specify tenant
+  tenantId?: string;
 }
 
 export interface CreateBranchDto {
@@ -61,13 +57,11 @@ export interface CreateBranchDto {
   address: string;
   contactName: string;
   contactPhone: string;
-  merchantId: string;
 }
 
 export interface CreatePosDto {
   name: string;
   description: string;
-  branchId: string;
 }
 
 export interface UpdateMerchantDto {
@@ -95,9 +89,8 @@ export interface UpdatePosDto {
 
 const merchantApi = {
   // Merchant CRUD operations
-  getAllMerchants: async (tenantId?: string): Promise<Merchant[]> => {
-    const params = tenantId ? { tenantId } : {};
-    const response = await apiClient.get("/merchants", { params });
+  getAllMerchants: async (): Promise<Merchant[]> => {
+    const response = await apiClient.get("/merchants");
     return response.data;
   },
 
@@ -107,8 +100,27 @@ const merchantApi = {
   },
 
   createMerchant: async (merchant: CreateMerchantDto): Promise<Merchant> => {
-    const response = await apiClient.post("/merchants", merchant);
-    return response.data;
+    console.log("🚀 Creating merchant:", merchant);
+    try {
+      const response = await apiClient.post("/merchants", merchant);
+      console.log("✅ Merchant created successfully:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error creating merchant:", error);
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = (
+          error as {
+            response?: { data?: unknown; status?: number; headers?: unknown };
+          }
+        ).response;
+        if (errorResponse) {
+          console.error("Response data:", errorResponse.data);
+          console.error("Response status:", errorResponse.status);
+          console.error("Response headers:", errorResponse.headers);
+        }
+      }
+      throw error;
+    }
   },
 
   updateMerchant: async (
@@ -124,66 +136,98 @@ const merchantApi = {
   },
 
   createBinanceSubMerchant: async (id: string): Promise<Merchant> => {
-    const response = await apiClient.post(`/merchants/${id}/binance-submerchant`);
+    const response = await apiClient.post(
+      `/merchants/${id}/binance-submerchant`
+    );
     return response.data;
   },
 
-  // Branch CRUD operations
-  getAllBranches: async (merchantId?: string): Promise<Branch[]> => {
-    const params = merchantId ? { merchantId } : {};
-    const response = await apiClient.get("/branches", { params });
+  // Branch CRUD operations (with merchant context)
+  getAllBranches: async (merchantId: string): Promise<Branch[]> => {
+    const response = await apiClient.get(`/merchants/${merchantId}/branches`);
     return response.data;
   },
 
-  getBranch: async (id: string): Promise<Branch> => {
-    const response = await apiClient.get(`/branches/${id}`);
+  getBranch: async (branchId: string): Promise<Branch> => {
+    const response = await apiClient.get(`/branches/${branchId}`);
     return response.data;
   },
 
-  createBranch: async (branch: CreateBranchDto): Promise<Branch> => {
-    const response = await apiClient.post("/branches", branch);
+  createBranch: async (
+    merchantId: string,
+    branch: CreateBranchDto
+  ): Promise<Branch> => {
+    const response = await apiClient.post(
+      `/merchants/${merchantId}/branches`,
+      branch
+    );
     return response.data;
   },
 
   updateBranch: async (
-    id: string,
+    branchId: string,
     branch: UpdateBranchDto
   ): Promise<Branch> => {
-    const response = await apiClient.put(`/branches/${id}`, branch);
+    const response = await apiClient.put(`/branches/${branchId}`, branch);
     return response.data;
   },
 
-  deleteBranch: async (id: string): Promise<void> => {
-    await apiClient.delete(`/branches/${id}`);
+  deleteBranch: async (branchId: string): Promise<void> => {
+    await apiClient.delete(`/branches/${branchId}`);
   },
 
-  // POS CRUD operations
-  getAllPos: async (branchId?: string): Promise<Pos[]> => {
-    const params = branchId ? { branchId } : {};
-    const response = await apiClient.get("/pos", { params });
+  // POS CRUD operations (with branch context)
+  getAllPos: async (merchantId: string, branchId: string): Promise<Pos[]> => {
+    const response = await apiClient.get(
+      `/merchants/${merchantId}/branches/${branchId}/pos`
+    );
     return response.data;
   },
 
-  getPos: async (id: string): Promise<Pos> => {
-    const response = await apiClient.get(`/pos/${id}`);
+  getPos: async (
+    merchantId: string,
+    branchId: string,
+    posId: string
+  ): Promise<Pos> => {
+    const response = await apiClient.get(
+      `/merchants/${merchantId}/branches/${branchId}/pos/${posId}`
+    );
     return response.data;
   },
 
-  createPos: async (pos: CreatePosDto): Promise<Pos> => {
-    const response = await apiClient.post("/pos", pos);
+  createPos: async (
+    merchantId: string,
+    branchId: string,
+    pos: CreatePosDto
+  ): Promise<Pos> => {
+    const response = await apiClient.post(
+      `/merchants/${merchantId}/branches/${branchId}/pos`,
+      pos
+    );
     return response.data;
   },
 
   updatePos: async (
-    id: string,
+    merchantId: string,
+    branchId: string,
+    posId: string,
     pos: UpdatePosDto
   ): Promise<Pos> => {
-    const response = await apiClient.put(`/pos/${id}`, pos);
+    const response = await apiClient.put(
+      `/merchants/${merchantId}/branches/${branchId}/pos/${posId}`,
+      pos
+    );
     return response.data;
   },
 
-  deletePos: async (id: string): Promise<void> => {
-    await apiClient.delete(`/pos/${id}`);
+  deletePos: async (
+    merchantId: string,
+    branchId: string,
+    posId: string
+  ): Promise<void> => {
+    await apiClient.delete(
+      `/merchants/${merchantId}/branches/${branchId}/pos/${posId}`
+    );
   },
 };
 

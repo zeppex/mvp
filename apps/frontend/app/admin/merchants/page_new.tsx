@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +64,16 @@ function MerchantsPageContent() {
   const router = useRouter();
   const { user } = useAuth();
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetchMerchants();
+    }
+  }, []);
+
+  useEffect(() => {
+    filterMerchants();
+  }, [merchants, searchQuery, statusFilter]);
+
   const fetchMerchants = async () => {
     try {
       setLoading(true);
@@ -78,7 +88,7 @@ function MerchantsPageContent() {
     }
   };
 
-  const filterMerchants = useCallback(() => {
+  const filterMerchants = () => {
     let filtered = merchants;
 
     // Filter by search query
@@ -98,17 +108,7 @@ function MerchantsPageContent() {
     }
 
     setFilteredMerchants(filtered);
-  }, [merchants, searchQuery, statusFilter]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      fetchMerchants();
-    }
-  }, []);
-
-  useEffect(() => {
-    filterMerchants();
-  }, [filterMerchants]);
+  };
 
   const handleCreateMerchant = () => {
     router.push("/admin/merchants/create");
@@ -151,11 +151,8 @@ function MerchantsPageContent() {
             Manage all merchants in the platform
           </p>
         </div>
-        {user?.role === UserRole.SUPERADMIN && (
-          <Button
-            onClick={handleCreateMerchant}
-            className="flex items-center gap-2"
-          >
+        {(user?.role === UserRole.SUPERADMIN) && (
+          <Button onClick={handleCreateMerchant} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Create Merchant
           </Button>
@@ -163,10 +160,7 @@ function MerchantsPageContent() {
       </div>
 
       {error && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-          role="alert"
-        >
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
           <span className="block sm:inline">{error}</span>
         </div>
       )}
@@ -216,15 +210,11 @@ function MerchantsPageContent() {
           ) : filteredMerchants.length === 0 ? (
             <div className="text-center py-8">
               <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No merchants found
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No merchants found</h3>
               <p className="text-gray-500">
-                {searchQuery
-                  ? "Try adjusting your search criteria."
-                  : "Get started by creating your first merchant."}
+                {searchQuery ? "Try adjusting your search criteria." : "Get started by creating your first merchant."}
               </p>
-              {user?.role === UserRole.SUPERADMIN && !searchQuery && (
+              {(user?.role === UserRole.SUPERADMIN) && !searchQuery && (
                 <Button onClick={handleCreateMerchant} className="mt-4">
                   Create First Merchant
                 </Button>
@@ -233,8 +223,7 @@ function MerchantsPageContent() {
           ) : (
             <Table>
               <TableCaption>
-                Showing {filteredMerchants.length} of {merchants.length}{" "}
-                merchants
+                Showing {filteredMerchants.length} of {merchants.length} merchants
               </TableCaption>
               <TableHeader>
                 <TableRow>
@@ -264,21 +253,13 @@ function MerchantsPageContent() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">
-                          {merchant.contactName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {merchant.contact}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {merchant.contactPhone}
-                        </div>
+                        <div className="font-medium">{merchant.contactName}</div>
+                        <div className="text-sm text-gray-500">{merchant.contact}</div>
+                        <div className="text-sm text-gray-500">{merchant.contactPhone}</div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={merchant.isActive ? "default" : "destructive"}
-                      >
+                      <Badge variant={merchant.isActive ? "default" : "destructive"}>
                         {merchant.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -294,40 +275,29 @@ function MerchantsPageContent() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleViewMerchant(merchant.id)}
-                          >
+                          <DropdownMenuItem onClick={() => handleViewMerchant(merchant.id)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleViewBranches(merchant.id)}
-                          >
+                          <DropdownMenuItem onClick={() => handleViewBranches(merchant.id)}>
                             <Store className="mr-2 h-4 w-4" />
                             View Branches
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleViewUsers(merchant.id)}
-                          >
+                          <DropdownMenuItem onClick={() => handleViewUsers(merchant.id)}>
                             <Users className="mr-2 h-4 w-4" />
                             View Users
                           </DropdownMenuItem>
-                          {(user?.role === UserRole.SUPERADMIN ||
-                            (user?.role === UserRole.ADMIN &&
-                              user.merchantId === merchant.id)) && (
+                          {(user?.role === UserRole.SUPERADMIN || 
+                            (user?.role === UserRole.ADMIN && user.merchantId === merchant.id)) && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleEditMerchant(merchant.id)}
-                              >
+                              <DropdownMenuItem onClick={() => handleEditMerchant(merchant.id)}>
                                 <Settings className="mr-2 h-4 w-4" />
                                 Edit Merchant
                               </DropdownMenuItem>
                               {user?.role === UserRole.SUPERADMIN && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleDeleteMerchant(merchant.id)
-                                  }
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteMerchant(merchant.id)}
                                   className="text-red-600"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />

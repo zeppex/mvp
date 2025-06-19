@@ -119,7 +119,9 @@ export default function MerchantsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Merchants</h2>
-          <p className="text-muted-foreground">Manage merchants and their settings</p>
+          <p className="text-muted-foreground">
+            Manage merchants and their settings
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild>
@@ -134,7 +136,9 @@ export default function MerchantsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Merchant List</CardTitle>
-          <CardDescription>View and manage all merchants on the platform</CardDescription>
+          <CardDescription>
+            View and manage all merchants on the platform
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
@@ -171,7 +175,7 @@ export default function MerchantsPage() {
                   <TableHead>Merchant</TableHead>
                   <TableHead>Branches</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Tenant</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -189,7 +193,10 @@ export default function MerchantsPage() {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-red-500">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-8 text-red-500"
+                    >
                       Error: {error}
                     </TableCell>
                   </TableRow>
@@ -205,23 +212,31 @@ export default function MerchantsPage() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{merchant.name}</div>
-                          <div className="text-sm text-muted-foreground">{merchant.address}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {merchant.address}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{merchant.branches?.length || 0}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{merchant.contactName}</div>
-                          <div className="text-sm text-muted-foreground">{merchant.contactPhone}</div>
+                          <div className="font-medium">
+                            {merchant.contactName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {merchant.contactPhone}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{merchant.tenant.name}</div>
+                        <div className="text-sm">{merchant.contact}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getStatusIcon(merchant.isActive)}
-                          <span className="capitalize">{merchant.isActive ? 'Active' : 'Paused'}</span>
+                          <span className="capitalize">
+                            {merchant.isActive ? "Active" : "Paused"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(merchant.createdAt)}</TableCell>
@@ -236,16 +251,30 @@ export default function MerchantsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              <Link href={`/admin/dashboard/merchants/${merchant.id}`}>View Details</Link>
+                              <Link
+                                href={`/admin/dashboard/merchants/${merchant.id}`}
+                              >
+                                View Details
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/admin/dashboard/merchants/${merchant.id}/edit`}>Edit Merchant</Link>
+                              <Link
+                                href={`/admin/dashboard/merchants/${merchant.id}/edit`}
+                              >
+                                Edit Merchant
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {merchant.isActive ? (
-                              <DropdownMenuItem onClick={() => handlePause(merchant)}>Pause Merchant</DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handlePause(merchant)}
+                              >
+                                Pause Merchant
+                              </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem>Resume Merchant</DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Resume Merchant
+                              </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -264,8 +293,8 @@ export default function MerchantsPage() {
           <DialogHeader>
             <DialogTitle>Pause Merchant</DialogTitle>
             <DialogDescription>
-              You are about to pause {selectedMerchant?.name}. This will prevent them from
-              processing payments.
+              You are about to pause {selectedMerchant?.name}. This will prevent
+              them from processing payments.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -275,12 +304,20 @@ export default function MerchantsPage() {
               </div>
               <div>
                 <p className="font-medium">{selectedMerchant?.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedMerchant?.address}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedMerchant?.address}
+                </p>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pause-reason">Reason for pausing (optional)</Label>
-              <Input id="pause-reason" value={pauseReason} onChange={(e) => setPauseReason(e.target.value)} />
+              <Label htmlFor="pause-reason">
+                Reason for pausing (optional)
+              </Label>
+              <Input
+                id="pause-reason"
+                value={pauseReason}
+                onChange={(e) => setPauseReason(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -295,5 +332,5 @@ export default function MerchantsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
