@@ -19,18 +19,14 @@ export class MerchantService {
     private readonly binanceClient: BinanceClientService,
   ) {}
 
-  async create(
-    createMerchantDto: CreateMerchantDto,
-    tenantId: string,
-  ): Promise<Merchant> {
+  async create(createMerchantDto: CreateMerchantDto): Promise<Merchant> {
     const merchant = await this.merchantRepository.create({
       ...createMerchantDto,
-      tenant: { id: tenantId } as any,
     });
     const savedMerchant = await this.merchantRepository.save(merchant);
 
     this.logger.log(
-      `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id} for tenant: ${tenantId}`,
+      `Creating merchant with name ${createMerchantDto.name} - Merchant ID: ${savedMerchant.id}`,
     );
     return savedMerchant;
   }
@@ -42,19 +38,9 @@ export class MerchantService {
   async findOne(id: string): Promise<Merchant> {
     const merchant = await this.merchantRepository.findOne({
       where: { id },
-      relations: ['tenant'],
     });
     if (!merchant) throw new NotFoundException(`Merchant ${id} not found`);
     return merchant;
-  }
-
-  async findByTenant(tenantId: string): Promise<Merchant[]> {
-    return this.merchantRepository.find({
-      where: {
-        tenant: { id: tenantId },
-      },
-      relations: ['tenant'],
-    });
   }
 
   async remove(id: string): Promise<void> {

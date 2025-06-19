@@ -35,7 +35,7 @@ export class BranchController {
   constructor(private readonly branchService: BranchService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new branch for a merchant' })
   @ApiParam({
     name: 'merchantId',
@@ -53,20 +53,14 @@ export class BranchController {
     @Body() createBranchDto: CreateBranchDto,
     @Request() req,
   ): Promise<Branch> {
-    // For TENANT_ADMIN, verify that the merchant belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      // Verify that the merchant belongs to the tenant admin's tenant
-      const isMerchantFromTenant =
-        await this.branchService.isMerchantFromTenant(
-          merchantId,
-          req.user.tenantId,
-        );
-
-      if (!isMerchantFromTenant) {
-        throw new ForbiddenException(
-          'You can only create branches for merchants in your tenant',
-        );
-      }
+    // For ADMIN, verify they can only create branches for their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only create branches for your own merchant',
+      );
     }
 
     return this.branchService.create(merchantId, createBranchDto);
@@ -88,19 +82,14 @@ export class BranchController {
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Request() req,
   ): Promise<Branch[]> {
-    // For TENANT_ADMIN, verify that the merchant belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isMerchantFromTenant =
-        await this.branchService.isMerchantFromTenant(
-          merchantId,
-          req.user.tenantId,
-        );
-
-      if (!isMerchantFromTenant) {
-        throw new ForbiddenException(
-          'You can only access branches for merchants in your tenant',
-        );
-      }
+    // For ADMIN, verify they can only access branches for their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only access branches for your own merchant',
+      );
     }
 
     return this.branchService.findAll(merchantId);
@@ -120,25 +109,23 @@ export class BranchController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Branch> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        id,
-        req.user.tenantId,
-      );
+    const branch = await this.branchService.findOne(id);
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only access branches in your tenant',
-        );
-      }
+    // For ADMIN, verify they can only access branches for their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      branch.merchant.id !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only access branches for your own merchant',
+      );
     }
 
-    return this.branchService.findOne(id);
+    return branch;
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a branch by ID for a merchant' })
   @ApiParam({
     name: 'merchantId',
@@ -152,18 +139,16 @@ export class BranchController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        id,
-        req.user.tenantId,
-      );
+    const branch = await this.branchService.findOne(id);
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only delete branches in your tenant',
-        );
-      }
+    // For ADMIN, verify they can only delete branches for their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      branch.merchant.id !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only delete branches for your own merchant',
+      );
     }
 
     return this.branchService.remove(id);

@@ -26,15 +26,9 @@ export class PaymentOrderService {
     branchId: UUID,
     posId: UUID,
     createDto: CreatePaymentOrderDto,
-    tenantId?: UUID,
   ): Promise<PaymentOrder> {
-    // Get branch and check tenant access
-    const branch = await this.branchService.findOne(merchantId, branchId);
-
-    // If tenantId is provided, verify access
-    if (tenantId && branch.merchant.tenant?.id !== tenantId) {
-      throw new ForbiddenException('You do not have access to this merchant');
-    }
+    // Get branch to validate it exists
+    const branch = await this.branchService.findOne(branchId, merchantId);
 
     await this.posService.findOne(merchantId, branchId, posId);
 
@@ -49,11 +43,11 @@ export class PaymentOrderService {
   }
 
   async findAll(
-    merchantId: string,
-    branchId: string,
-    posId: string,
+    merchantId: UUID,
+    branchId: UUID,
+    posId: UUID,
   ): Promise<PaymentOrder[]> {
-    await this.branchService.findOne(merchantId, branchId);
+    await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
     return this.orderRepository.find({
       where: {
@@ -69,7 +63,7 @@ export class PaymentOrderService {
     posId: UUID,
     id: UUID,
   ): Promise<PaymentOrder> {
-    await this.branchService.findOne(merchantId, branchId);
+    await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
     const order = await this.orderRepository.findOne({
       where: {
@@ -88,7 +82,7 @@ export class PaymentOrderService {
     posId: UUID,
     id: UUID,
   ): Promise<void> {
-    await this.branchService.findOne(merchantId, branchId);
+    await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
     const result = await this.orderRepository.delete({
       id,
@@ -103,7 +97,7 @@ export class PaymentOrderService {
     branchId: UUID,
     posId: UUID,
   ): Promise<PaymentOrder> {
-    await this.branchService.findOne(merchantId, branchId);
+    await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
 
     const order = await this.orderRepository.findOne({
@@ -126,24 +120,5 @@ export class PaymentOrderService {
     }
 
     return order;
-  }
-
-  /**
-   * Verifies if a payment order belongs to a specific tenant
-   */
-  async isPaymentOrderFromTenant(
-    orderId: UUID,
-    tenantId: UUID,
-  ): Promise<boolean> {
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-      relations: ['branch', 'branch.merchant'],
-    });
-
-    if (!order) {
-      throw new NotFoundException(`Payment order ${orderId} not found`);
-    }
-
-    return order.branch.merchant.tenant?.id === tenantId;
   }
 }

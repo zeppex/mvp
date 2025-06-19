@@ -39,24 +39,18 @@ export class TenantController {
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   findOne(@Param('id') id: string, @Request() req) {
-    // For TENANT_ADMIN, ensure they can only access their own tenant
-    if (req.user.role === UserRole.TENANT_ADMIN && req.user.tenantId !== id) {
-      throw new ForbiddenException('You can only access your own tenant');
-    }
     return this.tenantService.findOne(id);
   }
 
   @Put(':id')
-  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
-  update(@Param('id') id: string, @Body() updateTenantDto: UpdateTenantDto, @Request() req) {
-    // For TENANT_ADMIN, ensure they can only update their own tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      if (req.user.tenantId !== id) {
-        throw new ForbiddenException('You can only update your own tenant');
-      }
-    }
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
+  update(
+    @Param('id') id: string,
+    @Body() updateTenantDto: UpdateTenantDto,
+    @Request() req,
+  ) {
     return this.tenantService.update(id, updateTenantDto);
   }
 

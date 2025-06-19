@@ -62,5 +62,13 @@ export class UpdateUserDto {
 
   @IsUUID()
   @IsOptional()
-  tenantId?: string;
+  merchantId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  branchId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  posId?: string;
 }

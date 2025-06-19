@@ -26,20 +26,21 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
-import { BranchService } from '../services/branch.service';
 
 @ApiBearerAuth('access-token')
 @ApiTags('payment-orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('merchants/:merchantId/branches/:branchId/pos/:posId/orders')
 export class PaymentOrderController {
-  constructor(
-    private readonly orderService: PaymentOrderService,
-    private readonly branchService: BranchService,
-  ) {}
+  constructor(private readonly orderService: PaymentOrderService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.ADMIN,
+    UserRole.BRANCH_ADMIN,
+    UserRole.CASHIER,
+  )
   @ApiOperation({ summary: 'Create a new payment order' })
   @ApiParam({
     name: 'merchantId',
@@ -65,18 +66,31 @@ export class PaymentOrderController {
     @Body() dto: CreatePaymentOrderDto,
     @Request() req,
   ): Promise<PaymentOrder> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        branchId,
-        req.user.tenantId,
+    // For ADMIN, verify they can only access their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only create payment orders for your own merchant',
       );
+    }
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only create payment orders for branches in your tenant',
-        );
-      }
+    // For BRANCH_ADMIN, verify they can only access their own branch
+    if (
+      req.user.role === UserRole.BRANCH_ADMIN &&
+      branchId !== req.user.branchId
+    ) {
+      throw new ForbiddenException(
+        'You can only create payment orders for your own branch',
+      );
+    }
+
+    // For CASHIER, verify they can only access their own POS
+    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
+      throw new ForbiddenException(
+        'You can only create payment orders for your own POS',
+      );
     }
 
     return this.orderService.create(merchantId, branchId, posId, dto);
@@ -106,18 +120,31 @@ export class PaymentOrderController {
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
   ): Promise<PaymentOrder[]> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        branchId,
-        req.user.tenantId,
+    // For ADMIN, verify they can only access their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own merchant',
       );
+    }
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only access payment orders for branches in your tenant',
-        );
-      }
+    // For BRANCH_ADMIN, verify they can only access their own branch
+    if (
+      req.user.role === UserRole.BRANCH_ADMIN &&
+      branchId !== req.user.branchId
+    ) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own branch',
+      );
+    }
+
+    // For CASHIER, verify they can only access their own POS
+    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own POS',
+      );
     }
 
     return this.orderService.findAll(merchantId, branchId, posId);
@@ -150,25 +177,38 @@ export class PaymentOrderController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<PaymentOrder> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        branchId,
-        req.user.tenantId,
+    // For ADMIN, verify they can only access their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own merchant',
       );
+    }
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only access payment orders for branches in your tenant',
-        );
-      }
+    // For BRANCH_ADMIN, verify they can only access their own branch
+    if (
+      req.user.role === UserRole.BRANCH_ADMIN &&
+      branchId !== req.user.branchId
+    ) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own branch',
+      );
+    }
+
+    // For CASHIER, verify they can only access their own POS
+    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
+      throw new ForbiddenException(
+        'You can only access payment orders for your own POS',
+      );
     }
 
     return this.orderService.findOne(merchantId, branchId, posId, id);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
   @ApiOperation({ summary: 'Delete a payment order by ID' })
   @ApiParam({
     name: 'merchantId',
@@ -191,18 +231,24 @@ export class PaymentOrderController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    // For TENANT_ADMIN, verify that the branch belongs to their tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      const isBranchFromTenant = await this.branchService.isBranchFromTenant(
-        branchId,
-        req.user.tenantId,
+    // For ADMIN, verify they can only access their own merchant
+    if (
+      req.user.role === UserRole.ADMIN &&
+      merchantId !== req.user.merchantId
+    ) {
+      throw new ForbiddenException(
+        'You can only delete payment orders for your own merchant',
       );
+    }
 
-      if (!isBranchFromTenant) {
-        throw new ForbiddenException(
-          'You can only delete payment orders for branches in your tenant',
-        );
-      }
+    // For BRANCH_ADMIN, verify they can only access their own branch
+    if (
+      req.user.role === UserRole.BRANCH_ADMIN &&
+      branchId !== req.user.branchId
+    ) {
+      throw new ForbiddenException(
+        'You can only delete payment orders for your own branch',
+      );
     }
 
     return this.orderService.remove(merchantId, branchId, posId, id);

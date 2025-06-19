@@ -45,13 +45,44 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    // For tenant-scoped roles, check tenant context
-    if (user.role !== UserRole.SUPERADMIN && user.role !== UserRole.ADMIN) {
-      const requestTenantId = request.params.tenantId || request.body.tenantId || request.query.tenantId || request.tenantId;
-      
-      // If there's a tenant context in the request, ensure the user belongs to that tenant
-      if (requestTenantId && user.tenantId && requestTenantId !== user.tenantId) {
+    // For merchant-scoped roles, check merchant context
+    if (user.role !== UserRole.SUPERADMIN) {
+      const requestMerchantId =
+        request.params.merchantId ||
+        request.body.merchantId ||
+        request.query.merchantId ||
+        request.merchantId;
+      const requestBranchId =
+        request.params.branchId ||
+        request.body.branchId ||
+        request.query.branchId ||
+        request.branchId;
+
+      // If there's a merchant context in the request, ensure the user belongs to that merchant
+      if (
+        requestMerchantId &&
+        user.merchantId &&
+        requestMerchantId !== user.merchantId
+      ) {
         return false;
+      }
+
+      // If there's a branch context in the request and user is branch-scoped, ensure they belong to that branch
+      if (
+        requestBranchId &&
+        user.role === UserRole.BRANCH_ADMIN &&
+        user.branchId &&
+        requestBranchId !== user.branchId
+      ) {
+        return false;
+      }
+
+      // If user is a cashier, they can only access their own resources
+      if (user.role === UserRole.CASHIER) {
+        const requestUserId = request.params.id || request.params.userId;
+        if (requestUserId && requestUserId !== user.sub) {
+          return false;
+        }
       }
     }
 

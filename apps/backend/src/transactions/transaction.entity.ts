@@ -10,7 +10,6 @@ import { Merchant } from '../merchant/entities/merchant.entity';
 import { Branch } from '../merchant/entities/branch.entity';
 import { Pos } from '../merchant/entities/pos.entity';
 import { PaymentOrder } from '../merchant/entities/payment-order.entity';
-import { Tenant } from '../tenant/entities/tenant.entity';
 
 //TODO agregar userID, fechas, tipado de datos
 @Entity('transactions')
@@ -49,9 +48,6 @@ export class Transaction {
 
   @Column()
   description: string;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  tenant: Tenant;
 
   @Column('uuid', { nullable: true })
   userId: string;

@@ -49,7 +49,7 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'The role of the user',
     enum: UserRole,
-    example: 'tenant_admin',
+    example: 'admin',
     required: false,
   })
   @IsEnum(UserRole)
@@ -57,11 +57,32 @@ export class CreateUserDto {
   role?: UserRole;
 
   @ApiProperty({
-    description: 'The ID of the tenant this user belongs to',
+    description:
+      'The ID of the merchant this user belongs to (null for SUPERADMIN)',
     example: '019730ab-7b64-7218-aad6-773cdcbb719f',
     required: false,
   })
   @IsUUID()
   @IsOptional()
-  tenantId?: string;
+  merchantId?: string;
+
+  @ApiProperty({
+    description:
+      'The ID of the branch this user belongs to (null for SUPERADMIN and ADMIN)',
+    example: '019730ab-7b64-7218-aad6-773cdcbb719f',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  branchId?: string;
+
+  @ApiProperty({
+    description:
+      'The ID of the POS this user can operate (only for CASHIER role)',
+    example: '019730ab-7b64-7218-aad6-773cdcbb719f',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  posId?: string;
 }

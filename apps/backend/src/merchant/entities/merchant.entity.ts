@@ -4,13 +4,11 @@ import {
   PrimaryColumn,
   BeforeInsert,
   OneToMany,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
 import { Branch } from './branch.entity';
-import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('merchants')
 export class Merchant {
@@ -37,9 +35,6 @@ export class Merchant {
 
   @Column({ default: true })
   isActive: boolean;
-
-  @ManyToOne(() => Tenant, { nullable: false })
-  tenant: Tenant;
 
   @OneToMany(() => Branch, (branch) => branch.merchant, { cascade: true })
   branches: Branch[];

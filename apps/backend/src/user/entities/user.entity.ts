@@ -8,15 +8,15 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
-import { Tenant } from '../../tenant/entities/tenant.entity';
+import { Merchant } from '../../merchant/entities/merchant.entity';
+import { Branch } from '../../merchant/entities/branch.entity';
+import { Pos } from '../../merchant/entities/pos.entity';
 
 export enum UserRole {
-  SUPERADMIN = 'superadmin',
-  ADMIN = 'admin',
-  TENANT_ADMIN = 'tenant_admin',
-  MERCHANT_ADMIN = 'merchant_admin',
-  BRANCH_ADMIN = 'branch_admin',
-  POS_USER = 'pos_user',
+  SUPERADMIN = 'superadmin', // Platform super admin - can create merchants
+  ADMIN = 'admin', // Merchant admin - can manage entire merchant
+  BRANCH_ADMIN = 'branch_admin', // Branch admin - can manage specific branch
+  CASHIER = 'cashier', // POS user - can only create payment orders for specific PoS
 }
 
 @Entity('users')
@@ -36,14 +36,24 @@ export class User {
   @Column()
   lastName: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.POS_USER })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.CASHIER })
   role: UserRole;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Tenant, { nullable: true })
-  tenant: Tenant;
+  // For SUPERADMIN: both merchant and branch will be null
+  // For ADMIN: merchant will be set, branch will be null
+  // For BRANCH_ADMIN and CASHIER: both merchant and branch will be set
+  @ManyToOne(() => Merchant, { nullable: true })
+  merchant: Merchant;
+
+  @ManyToOne(() => Branch, { nullable: true })
+  branch: Branch;
+
+  // For CASHIER: specific POS they can operate
+  @ManyToOne(() => Pos, { nullable: true })
+  pos: Pos;
 
   @CreateDateColumn()
   createdAt: Date;

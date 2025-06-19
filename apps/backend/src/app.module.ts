@@ -9,7 +9,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantModule } from './merchant/merchant.module';
 import { PaymentOrderModule } from './merchant/payment-order.module';
 import { TransactionModule } from './transactions/transaction.module';
-import { TenantModule } from './tenant/tenant.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -29,7 +28,6 @@ import { AuthModule } from './auth/auth.module';
     ExchangeGwModule,
     BinanceClientModule,
     SharedModule,
-    TenantModule,
     UserModule,
     AuthModule,
     MerchantModule,

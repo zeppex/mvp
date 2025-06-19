@@ -63,19 +63,4 @@ export class PosService {
       throw new NotFoundException(`POS ${id} not found for branch ${branchId}`);
   }
 
-  /**
-   * Verifies if a POS belongs to a specific tenant
-   */
-  async isPosFromTenant(posId: UUID, tenantId: UUID): Promise<boolean> {
-    const pos = await this.posRepository.findOne({
-      where: { id: posId },
-      relations: ['branch', 'branch.merchant'],
-    });
-
-    if (!pos) {
-      throw new NotFoundException(`POS ${posId} not found`);
-    }
-
-    return pos.branch.merchant.tenant?.id === tenantId;
-  }
 }

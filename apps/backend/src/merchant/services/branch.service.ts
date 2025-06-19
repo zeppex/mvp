@@ -20,15 +20,9 @@ export class BranchService {
   async create(
     merchantId: string,
     createBranchDto: CreateBranchDto,
-    tenantId?: string,
   ): Promise<Branch> {
-    // ensure merchant exists and check tenant access
+    // ensure merchant exists
     const merchant = await this.merchantService.findOne(merchantId);
-
-    // If tenantId is provided, verify access
-    if (tenantId && merchant.tenant?.id !== tenantId) {
-      throw new ForbiddenException('You do not have access to this merchant');
-    }
 
     const branch = this.branchRepository.create({
       ...createBranchDto,
@@ -37,15 +31,7 @@ export class BranchService {
     return this.branchRepository.save(branch);
   }
 
-  async findAll(merchantId: string, tenantId?: string): Promise<Branch[]> {
-    // If tenantId is provided, verify tenant access to this merchant
-    if (tenantId) {
-      const merchant = await this.merchantService.findOne(merchantId);
-      if (merchant.tenant?.id !== tenantId) {
-        throw new ForbiddenException('You do not have access to this merchant');
-      }
-    }
-
+  async findAll(merchantId: string): Promise<Branch[]> {
     return this.branchRepository.find({
       where: {
         merchant: { id: merchantId },
@@ -54,11 +40,7 @@ export class BranchService {
     });
   }
 
-  async findOne(
-    id: string,
-    merchantId?: string,
-    tenantId?: string,
-  ): Promise<Branch> {
+  async findOne(id: string, merchantId?: string): Promise<Branch> {
     const queryOptions: any = { where: { id } };
 
     if (merchantId) {
@@ -73,45 +55,13 @@ export class BranchService {
       throw new NotFoundException(`Branch ${id} not found`);
     }
 
-    // If tenantId is provided, verify tenant access
-    if (tenantId && branch.merchant.tenant?.id !== tenantId) {
-      throw new ForbiddenException('You do not have access to this branch');
-    }
-
     return branch;
   }
 
-  async remove(id: string, tenantId?: string): Promise<void> {
-    // Verify tenant access if tenantId is provided
-    if (tenantId) {
-      const branch = await this.findOne(id, undefined, tenantId);
-    }
-
+  async remove(id: string): Promise<void> {
     const result = await this.branchRepository.delete({ id });
     if (result.affected === 0) {
       throw new NotFoundException(`Branch ${id} not found`);
     }
-  }
-
-  /**
-   * Verifies if a merchant belongs to the specified tenant
-   */
-  async isMerchantFromTenant(
-    merchantId: string,
-    tenantId: string,
-  ): Promise<boolean> {
-    const merchant = await this.merchantService.findOne(merchantId);
-    return merchant.tenant?.id === tenantId;
-  }
-
-  /**
-   * Verifies if a branch belongs to the specified tenant
-   */
-  async isBranchFromTenant(
-    branchId: string,
-    tenantId: string,
-  ): Promise<boolean> {
-    const branch = await this.findOne(branchId);
-    return branch.merchant.tenant?.id === tenantId;
   }
 }

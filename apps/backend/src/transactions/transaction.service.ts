@@ -22,21 +22,16 @@ export class TransactionService {
     private readonly posService: PosService,
   ) {}
 
-  async create(
-    dto: CreateTransactionDto,
-    tenantId?: UUID,
-  ): Promise<Transaction> {
+  async create(dto: CreateTransactionDto): Promise<Transaction> {
     const { merchantId, branchId, posId, ...rest } = dto;
 
-    // Get the merchant to check tenant access
+    // Verify the merchant exists
     const merchant = await this.merchantService.findOne(merchantId);
 
-    // If tenantId is provided, verify access
-    if (tenantId && merchant.tenant?.id !== tenantId) {
-      throw new ForbiddenException('You do not have access to this merchant');
-    }
+    // Verify the branch exists and belongs to the merchant
+    await this.branchService.findOne(branchId, merchantId);
 
-    await this.branchService.findOne(merchantId, branchId);
+    // Verify the POS exists and belongs to the branch
     await this.posService.findOne(merchantId, branchId, posId);
 
     const transaction = this.transactionRepository.create({
@@ -44,37 +39,35 @@ export class TransactionService {
       merchant: { id: merchantId } as any,
       branch: { id: branchId } as any,
       pos: { id: posId } as any,
-      // Set the tenant from the merchant
-      tenant: { id: merchant.tenant?.id } as any,
     });
 
     return this.transactionRepository.save(transaction);
   }
 
-  async findAll(tenantId?: UUID): Promise<Transaction[]> {
-    // If a tenantId is provided, only return transactions for that tenant
-    if (tenantId) {
+  async findAll(merchantId?: UUID): Promise<Transaction[]> {
+    // If a merchantId is provided, only return transactions for that merchant
+    if (merchantId) {
       return this.transactionRepository.find({
         where: {
-          tenant: { id: tenantId },
+          merchant: { id: merchantId },
         },
-        relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
+        relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
       });
     }
 
-    // Otherwise return all transactions (admin access)
+    // Otherwise return all transactions (superadmin access)
     return this.transactionRepository.find({
-      relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
     });
   }
 
-  async findOne(id: UUID, tenantId?: UUID): Promise<Transaction> {
-    // Create the where condition based on whether tenantId is provided
-    const where = tenantId ? { id, tenant: { id: tenantId } } : { id };
+  async findOne(id: UUID, merchantId?: UUID): Promise<Transaction> {
+    // Create the where condition based on whether merchantId is provided
+    const where = merchantId ? { id, merchant: { id: merchantId } } : { id };
 
     const transaction = await this.transactionRepository.findOne({
       where,
-      relations: ['merchant', 'branch', 'pos', 'paymentOrder', 'tenant'],
+      relations: ['merchant', 'branch', 'pos', 'paymentOrder'],
     });
 
     if (!transaction) {
@@ -84,11 +77,11 @@ export class TransactionService {
     return transaction;
   }
 
-  async remove(id: UUID, tenantId?: UUID): Promise<void> {
-    // If tenantId is provided, verify the transaction belongs to that tenant
-    if (tenantId) {
-      const transaction = await this.findOne(id, tenantId);
-      if (transaction.tenant?.id !== tenantId) {
+  async remove(id: UUID, merchantId?: UUID): Promise<void> {
+    // If merchantId is provided, verify the transaction belongs to that merchant
+    if (merchantId) {
+      const transaction = await this.findOne(id, merchantId);
+      if (transaction.merchant?.id !== merchantId) {
         throw new ForbiddenException(
           'You do not have access to this transaction',
         );

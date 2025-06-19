@@ -34,7 +34,7 @@ export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
 
   @Post()
-  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Create a new merchant' })
   @ApiResponse({
     status: 201,
@@ -46,28 +46,12 @@ export class MerchantController {
     @Body() createMerchantDto: CreateMerchantDto,
     @Request() req,
   ): Promise<Merchant> {
-    // For ADMIN users, tenantId must be provided
-    if (req.user.role === UserRole.ADMIN && !req.body.tenantId) {
-      throw new ForbiddenException(
-        'tenantId is required when creating a merchant as an admin',
-      );
-    }
-
-    // For TENANT_ADMIN, use their own tenantId and validate they're not trying to create for another tenant
-    if (req.user.role === UserRole.TENANT_ADMIN) {
-      if (req.body.tenantId && req.body.tenantId !== req.user.tenantId) {
-        throw new ForbiddenException(
-          'You can only create merchants for your own tenant',
-        );
-      }
-      return this.merchantService.create(createMerchantDto, req.user.tenantId);
-    }
-
-    // For ADMIN, use the provided tenantId
-    return this.merchantService.create(createMerchantDto, req.body.tenantId);
+    // Only SUPERADMIN can create merchants
+    return this.merchantService.create(createMerchantDto);
   }
 
   @Get()
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Retrieve all merchants' })
   @ApiResponse({
     status: 200,
@@ -75,25 +59,27 @@ export class MerchantController {
     type: [Merchant],
   })
   async findAll(@Request() req): Promise<Merchant[]> {
-    // ADMIN can see all merchants (optionally filtered by tenantId)
-    if (req.user.role === UserRole.ADMIN) {
-      if (req.query.tenantId) {
-        return this.merchantService.findByTenant(req.query.tenantId);
-      }
+    // SUPERADMIN can see all merchants
+    if (req.user.role === UserRole.SUPERADMIN) {
       return this.merchantService.findAll();
     }
 
-    // TENANT_ADMIN and other roles can only see merchants from their tenant
-    return this.merchantService.findByTenant(req.user.tenantId);
+    // ADMIN can only see their own merchant
+    if (req.user.role === UserRole.ADMIN) {
+      return [await this.merchantService.findOne(req.user.merchantId)];
+    }
+
+    throw new ForbiddenException('Insufficient permissions');
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Retrieve a merchant by ID' })
   @ApiParam({
     name: 'id',
     required: true,
     description: 'Merchant ID',
-    type: Number,
+    type: String,
   })
   @ApiResponse({
     status: 200,
@@ -101,22 +87,22 @@ export class MerchantController {
     type: Merchant,
   })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  async findOne(@Param('id', new ParseUUIDPipe()) id: string, @Request() req): Promise<Merchant> {
+  async findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Request() req,
+  ): Promise<Merchant> {
     const merchant = await this.merchantService.findOne(id);
-    
-    // If user is not SUPERADMIN or ADMIN, check tenant access
-    if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
-      if (merchant.tenant?.id !== req.user.tenantId) {
-        throw new ForbiddenException(
-          'You can only access merchants from your own tenant',
-        );
-      }
+
+    // If user is ADMIN, check they can only access their own merchant
+    if (req.user.role === UserRole.ADMIN && id !== req.user.merchantId) {
+      throw new ForbiddenException('You can only access your own merchant');
     }
-    
+
     return merchant;
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Delete a merchant by ID' })
   @ApiParam({
     name: 'id',
@@ -126,23 +112,13 @@ export class MerchantController {
   })
   @ApiResponse({ status: 204, description: 'Merchant successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Merchant not found.' })
-  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TENANT_ADMIN)
-  async remove(@Param('id', new ParseUUIDPipe()) id: string, @Request() req): Promise<void> {
-    const merchant = await this.merchantService.findOne(id);
-    
-    // If user is not SUPERADMIN or ADMIN, check tenant access
-    if (req.user.role !== UserRole.SUPERADMIN && req.user.role !== UserRole.ADMIN) {
-      if (merchant.tenant?.id !== req.user.tenantId) {
-        throw new ForbiddenException(
-          'You can only delete merchants from your own tenant',
-        );
-      }
-    }
-    
+  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
+    // Only SUPERADMIN can delete merchants
     return this.merchantService.remove(id);
   }
 
   @Post(':id/binance-submerchant')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create Binance Pay sub-merchant for a merchant' })
   @ApiParam({
     name: 'id',
@@ -155,9 +131,15 @@ export class MerchantController {
     description: 'Sub-merchant ID created and merchant updated.',
     type: Merchant,
   })
-  createBinanceSubMerchant(
+  async createBinanceSubMerchant(
     @Param('id', new ParseUUIDPipe()) id: string,
+    @Request() req,
   ): Promise<Merchant> {
+    // If user is ADMIN, check they can only access their own merchant
+    if (req.user.role === UserRole.ADMIN && id !== req.user.merchantId) {
+      throw new ForbiddenException('You can only manage your own merchant');
+    }
+
     return this.merchantService.createBinanceSubMerchant(id);
   }
 }

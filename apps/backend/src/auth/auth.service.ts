@@ -31,7 +31,9 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
-      tenantId: user.tenant?.id,
+      merchantId: user.merchant?.id,
+      branchId: user.branch?.id,
+      posId: user.pos?.id,
     };
 
     // Generate access token and refresh token
@@ -45,7 +47,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        tenantId: user.tenant?.id,
+        merchantId: user.merchant?.id,
+        branchId: user.branch?.id,
+        posId: user.pos?.id,
       },
       accessToken,
       refreshToken,
@@ -76,7 +80,9 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
-      tenantId: user.tenant?.id,
+      merchantId: user.merchant?.id,
+      branchId: user.branch?.id,
+      posId: user.pos?.id,
     };
 
     // Generate new access token and refresh token
@@ -95,7 +101,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        tenantId: user.tenant?.id,
+        merchantId: user.merchant?.id,
+        branchId: user.branch?.id,
+        posId: user.pos?.id,
       },
     };
   }

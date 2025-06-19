@@ -6,7 +6,7 @@ import {
   Body,
   Delete,
   ParseUUIDPipe,
-  Req,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
@@ -24,7 +24,7 @@ import { UUID } from '../shared/types/uuid';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { CurrentTenant } from '../auth/decorators/tenant.decorator';
+import { UserRole } from '../user/entities/user.entity';
 
 @ApiTags('transactions')
 @ApiBearerAuth('access-token')
@@ -34,6 +34,12 @@ export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
   @Post()
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.ADMIN,
+    UserRole.BRANCH_ADMIN,
+    UserRole.CASHIER,
+  )
   @ApiOperation({ summary: 'Create a new transaction' })
   @ApiBody({ type: CreateTransactionDto })
   @ApiResponse({
@@ -43,23 +49,28 @@ export class TransactionController {
   })
   create(
     @Body() dto: CreateTransactionDto,
-    @CurrentTenant() tenantId: UUID,
+    @Request() req,
   ): Promise<Transaction> {
-    return this.transactionService.create(dto, tenantId);
+    return this.transactionService.create(dto);
   }
 
   @Get()
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Retrieve all transactions' })
   @ApiResponse({
     status: 200,
     description: 'Return all transactions.',
     type: [Transaction],
   })
-  findAll(@CurrentTenant() tenantId: UUID): Promise<Transaction[]> {
-    return this.transactionService.findAll(tenantId);
+  findAll(@Request() req): Promise<Transaction[]> {
+    // SUPERADMIN can see all transactions, ADMIN can see only their merchant's transactions
+    const merchantId =
+      req.user.role === UserRole.ADMIN ? req.user.merchantId : undefined;
+    return this.transactionService.findAll(merchantId);
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Retrieve a transaction by ID' })
   @ApiParam({
     name: 'id',
@@ -75,12 +86,16 @@ export class TransactionController {
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
   findOne(
     @Param('id', new ParseUUIDPipe()) id: UUID,
-    @CurrentTenant() tenantId: UUID,
+    @Request() req,
   ): Promise<Transaction> {
-    return this.transactionService.findOne(id, tenantId);
+    // SUPERADMIN can see all transactions, ADMIN can see only their merchant's transactions
+    const merchantId =
+      req.user.role === UserRole.ADMIN ? req.user.merchantId : undefined;
+    return this.transactionService.findOne(id, merchantId);
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a transaction by ID' })
   @ApiParam({
     name: 'id',
@@ -95,8 +110,11 @@ export class TransactionController {
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
   remove(
     @Param('id', new ParseUUIDPipe()) id: UUID,
-    @CurrentTenant() tenantId: UUID,
+    @Request() req,
   ): Promise<void> {
-    return this.transactionService.remove(id, tenantId);
+    // SUPERADMIN can delete all transactions, ADMIN can delete only their merchant's transactions
+    const merchantId =
+      req.user.role === UserRole.ADMIN ? req.user.merchantId : undefined;
+    return this.transactionService.remove(id, merchantId);
   }
 }
