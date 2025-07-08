@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Body,
   Delete,
@@ -12,7 +13,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { MerchantService } from '../services/merchant.service';
-import { CreateMerchantDto } from '../dto/create-merchant.dto';
+import { CreateMerchantDto, UpdateMerchantDto } from '../dto';
 import { Merchant } from '../entities/merchant.entity';
 import {
   ApiTags,
@@ -23,13 +24,14 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { MerchantGuard } from '../../auth/guards/merchant.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('merchants')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
 @Controller('merchants')
 export class MerchantController {
   private readonly logger = new Logger(MerchantController.name);
@@ -80,17 +82,26 @@ export class MerchantController {
     type: [Merchant],
   })
   async findAll(@Request() req): Promise<Merchant[]> {
+    this.logger.debug('MerchantController.findAll - User:', {
+      id: req.user?.id,
+      role: req.user?.role,
+      merchantId: req.user?.merchantId,
+    });
+
     // SUPERADMIN can see all merchants
     if (req.user.role === UserRole.SUPERADMIN) {
       return this.merchantService.findAll();
     }
 
-    // ADMIN can only see their own merchant
-    if (req.user.role === UserRole.ADMIN) {
-      return [await this.merchantService.findOne(req.user.merchantId)];
+    // ADMIN can only see their own merchant (guard ensures this)
+    if (!req.user.merchantId) {
+      this.logger.error(
+        'MerchantController.findAll - ADMIN user has no merchantId:',
+        req.user,
+      );
+      throw new ForbiddenException('Admin user has no merchant association');
     }
-
-    throw new ForbiddenException('Insufficient permissions');
+    return [await this.merchantService.findOne(req.user.merchantId)];
   }
 
   @Get(':id')
@@ -112,14 +123,54 @@ export class MerchantController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Request() req,
   ): Promise<Merchant> {
+    this.logger.debug('MerchantController.findOne - User:', {
+      id: req.user?.id,
+      role: req.user?.role,
+      merchantId: req.user?.merchantId,
+    });
+
     const merchant = await this.merchantService.findOne(id);
-
-    // If user is ADMIN, check they can only access their own merchant
-    if (req.user.role === UserRole.ADMIN && id !== req.user.merchantId) {
-      throw new ForbiddenException('You can only access your own merchant');
-    }
-
+    this.logger.log(`🔍 Retrieved merchant with ID: ${id}`);
+    this.logger.debug('👤 Requested by user:', req.user?.id);
+    this.logger.debug(merchant);
     return merchant;
+  }
+
+  @Put(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update a merchant by ID' })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: 'Merchant ID',
+    type: String,
+  })
+  @ApiBody({ type: UpdateMerchantDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Merchant successfully updated.',
+    type: Merchant,
+  })
+  @ApiResponse({ status: 404, description: 'Merchant not found.' })
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateMerchantDto: UpdateMerchantDto,
+    @Request() req,
+  ): Promise<Merchant> {
+    this.logger.log(`🔄 Updating merchant with ID: ${id}`);
+    this.logger.debug(
+      '📋 Update DTO:',
+      JSON.stringify(updateMerchantDto, null, 2),
+    );
+
+    try {
+      const result = await this.merchantService.update(id, updateMerchantDto);
+      this.logger.log('✅ Merchant updated successfully');
+      return result;
+    } catch (error) {
+      this.logger.error('❌ Failed to update merchant:', error.message);
+      throw error;
+    }
   }
 
   @Delete(':id')

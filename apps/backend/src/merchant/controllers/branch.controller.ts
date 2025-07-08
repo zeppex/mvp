@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Body,
   Delete,
@@ -11,7 +12,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { BranchService } from '../services/branch.service';
-import { CreateBranchDto } from '../dto';
+import { CreateBranchDto, UpdateBranchDto } from '../dto';
 import { Branch } from '../entities/branch.entity';
 import {
   ApiTags,
@@ -23,14 +24,15 @@ import {
 } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { MerchantGuard } from '../../auth/guards/merchant.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('branches')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('/branches')
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
+@Controller('merchants/:merchantId/branches')
 export class BranchController {
   constructor(private readonly branchService: BranchService) {}
 
@@ -53,16 +55,6 @@ export class BranchController {
     @Body() createBranchDto: CreateBranchDto,
     @Request() req,
   ): Promise<Branch> {
-    // For ADMIN, verify they can only create branches for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only create branches for your own merchant',
-      );
-    }
-
     return this.branchService.create(merchantId, createBranchDto);
   }
 
@@ -82,16 +74,6 @@ export class BranchController {
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Request() req,
   ): Promise<Branch[]> {
-    // For ADMIN, verify they can only access branches for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access branches for your own merchant',
-      );
-    }
-
     return this.branchService.findAll(merchantId);
   }
 
@@ -110,18 +92,31 @@ export class BranchController {
     @Request() req,
   ): Promise<Branch> {
     const branch = await this.branchService.findOne(id);
-
-    // For ADMIN, verify they can only access branches for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      branch.merchant.id !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access branches for your own merchant',
-      );
-    }
-
     return branch;
+  }
+
+  @Put(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update a branch by ID for a merchant' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({ name: 'id', description: 'Branch ID', type: 'string' })
+  @ApiBody({ type: CreateBranchDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the updated branch.',
+    type: Branch,
+  })
+  @ApiResponse({ status: 404, description: 'Branch not found.' })
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Body() updateBranchDto: UpdateBranchDto,
+    @Request() req,
+  ): Promise<Branch> {
+    return this.branchService.update(id, updateBranchDto);
   }
 
   @Delete(':id')
@@ -139,18 +134,6 @@ export class BranchController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    const branch = await this.branchService.findOne(id);
-
-    // For ADMIN, verify they can only delete branches for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      branch.merchant.id !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only delete branches for your own merchant',
-      );
-    }
-
     return this.branchService.remove(id);
   }
 }

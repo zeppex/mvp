@@ -4,26 +4,72 @@ import { AppService } from './app.service';
 import { ExchangeGwModule } from './exchange-gw/exchange-gw.module';
 import { BinanceClientModule } from './binance-client/binance-client.module';
 import { SharedModule } from './shared/shared.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantModule } from './merchant/merchant.module';
 import { PaymentOrderModule } from './merchant/payment-order.module';
 import { TransactionModule } from './transactions/transaction.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
+import * as Joi from 'joi';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT, 10) || 5432,
-      username: process.env.DB_USER || 'user',
-      password: process.env.DB_PASS || 'password',
-      database: process.env.DB_NAME || 'zeppex',
-      autoLoadEntities: true,
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
+        PORT: Joi.number().default(4000),
+        FRONTEND_URL: Joi.string().uri().default('http://localhost:3000'),
+
+        // Database configuration
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.number().default(5432),
+        DB_USER: Joi.string().required(),
+        DB_PASS: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+
+        // JWT configuration
+        JWT_SECRET: Joi.string().min(32).required(),
+        JWT_ACCESS_TOKEN_EXPIRES_IN: Joi.string().default('15m'),
+        JWT_REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('7d'),
+
+        // Binance configuration (optional for development)
+        BINANCE_API_KEY: Joi.string().optional(),
+        BINANCE_SECRET_KEY: Joi.string().optional(),
+        BINANCE_API_URL: Joi.string().uri().optional(),
+      }),
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DB_HOST'),
+        port: configService.get('DB_PORT'),
+        username: configService.get('DB_USER'),
+        password: configService.get('DB_PASS'),
+        database: configService.get('DB_NAME'),
+        autoLoadEntities: true,
+        synchronize: configService.get('NODE_ENV') !== 'production', // Disable in production
+        logging: false, // Disable SQL logging
+        ssl:
+          configService.get('NODE_ENV') === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
+        extra: {
+          max: 20, // Maximum number of connections in the pool
+          connectionTimeoutMillis: 30000,
+          idleTimeoutMillis: 30000,
+        },
+      }),
+      inject: [ConfigService],
     }),
     ExchangeGwModule,
     BinanceClientModule,
@@ -33,6 +79,7 @@ import { AuthModule } from './auth/auth.module';
     MerchantModule,
     PaymentOrderModule,
     TransactionModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

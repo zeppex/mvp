@@ -251,15 +251,13 @@ export default function MerchantsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              <Link
-                                href={`/admin/dashboard/merchants/${merchant.id}`}
-                              >
+                              <Link href={`/admin/merchants/${merchant.id}`}>
                                 View Details
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link
-                                href={`/admin/dashboard/merchants/${merchant.id}/edit`}
+                                href={`/admin/merchants/${merchant.id}/edit`}
                               >
                                 Edit Merchant
                               </Link>

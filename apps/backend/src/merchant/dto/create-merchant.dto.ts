@@ -5,6 +5,7 @@ import {
   IsEmail,
   Length,
   Matches,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -16,6 +17,7 @@ export class CreateMerchantDto {
     maxLength: 100,
   })
   @IsString({ message: 'Merchant name must be a string' })
+  @IsNotEmpty({ message: 'Merchant name is required' })
   @Length(2, 100, {
     message: 'Merchant name must be between 2 and 100 characters',
   })
@@ -28,6 +30,7 @@ export class CreateMerchantDto {
     maxLength: 500,
   })
   @IsString({ message: 'Address must be a string' })
+  @IsNotEmpty({ message: 'Address is required' })
   @Length(5, 500, { message: 'Address must be between 5 and 500 characters' })
   address: string;
 
@@ -36,6 +39,7 @@ export class CreateMerchantDto {
     description: 'Contact email of the merchant (must be valid email format)',
   })
   @IsString({ message: 'Contact must be a string' })
+  @IsNotEmpty({ message: 'Contact email is required' })
   @IsEmail({}, { message: 'Contact must be a valid email address' })
   contact: string;
 
@@ -46,6 +50,7 @@ export class CreateMerchantDto {
     maxLength: 100,
   })
   @IsString({ message: 'Contact name must be a string' })
+  @IsNotEmpty({ message: 'Contact name is required' })
   @Length(2, 100, {
     message: 'Contact name must be between 2 and 100 characters',
   })
@@ -57,6 +62,7 @@ export class CreateMerchantDto {
     pattern: '^\\+?[1-9]\\d{1,14}$',
   })
   @IsString({ message: 'Contact phone must be a string' })
+  @IsNotEmpty({ message: 'Contact phone is required' })
   @Matches(/^\+?[1-9]\d{1,14}$/, {
     message: 'Contact phone must be a valid phone number (e.g., +1234567890)',
   })

@@ -6,10 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentOrder } from '../entities/payment-order.entity';
-import { CreatePaymentOrderDto } from '../dto';
+import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
 import { PosService } from './pos.service';
-import { PaymentOrderStatus } from 'src/shared/enums/payment-order-status.enum';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 import { UUID } from 'src/shared/types/uuid';
 
 @Injectable()
@@ -74,6 +74,22 @@ export class PaymentOrderService {
     });
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
     return order;
+  }
+
+  async update(
+    merchantId: UUID,
+    branchId: UUID,
+    posId: UUID,
+    id: UUID,
+    updatePaymentOrderDto: UpdatePaymentOrderDto,
+  ): Promise<PaymentOrder> {
+    await this.branchService.findOne(branchId, merchantId);
+    await this.posService.findOne(merchantId, branchId, posId);
+
+    const order = await this.findOne(merchantId, branchId, posId, id);
+
+    Object.assign(order, updatePaymentOrderDto);
+    return this.orderRepository.save(order);
   }
 
   async remove(

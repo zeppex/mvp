@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Body,
   Delete,
@@ -9,9 +10,10 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PosService } from '../services/pos.service';
-import { CreatePosDto } from '../dto';
+import { CreatePosDto, UpdatePosDto } from '../dto';
 import { Pos } from '../entities/pos.entity';
 import {
   ApiTags,
@@ -25,15 +27,17 @@ import { UUID } from 'crypto';
 import { PaymentOrderService } from '../services/payment-order.service';
 import { PaymentOrder } from '../entities/payment-order.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { MerchantGuard } from '../../auth/guards/merchant.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('pos')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('branches/:branchId/')
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
+@Controller('merchants/:merchantId/branches/:branchId/pos')
 export class PosController {
+  private readonly logger = new Logger(PosController.name);
   constructor(
     private readonly posService: PosService,
     private readonly paymentOrderService: PaymentOrderService,
@@ -64,26 +68,6 @@ export class PosController {
     @Body() createPosDto: CreatePosDto,
     @Request() req,
   ): Promise<Pos> {
-    // For ADMIN, verify they can only create POS for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only create POS for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only create POS for their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only create POS for your own branch',
-      );
-    }
-
     return this.posService.create(merchantId, branchId, createPosDto);
   }
 
@@ -105,25 +89,9 @@ export class PosController {
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Request() req,
   ): Promise<Pos[]> {
-    // For ADMIN, verify they can only access POS for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access POS for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access POS for their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only access POS for your own branch',
-      );
-    }
+    this.logger.log(
+      `Fetching POS for merchant ${merchantId}, branch ${branchId}`,
+    );
 
     return this.posService.findAll(merchantId, branchId);
   }
@@ -149,27 +117,38 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Pos> {
-    // For ADMIN, verify they can only access POS for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access POS for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access POS for their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only access POS for your own branch',
-      );
-    }
-
     return this.posService.findOne(merchantId, branchId, id);
+  }
+
+  @Put(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
+  @ApiOperation({ summary: 'Update a POS by ID for a branch' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
+  @ApiBody({ type: UpdatePosDto })
+  @ApiResponse({
+    status: 200,
+    description: 'POS successfully updated.',
+    type: Pos,
+  })
+  @ApiResponse({ status: 404, description: 'POS not found.' })
+  async update(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Body() updatePosDto: UpdatePosDto,
+    @Request() req,
+  ): Promise<Pos> {
+    return this.posService.update(merchantId, branchId, id, updatePosDto);
   }
 
   @Delete(':id')
@@ -194,26 +173,6 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    // For ADMIN, verify they can only delete POS for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only delete POS for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only delete POS for their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only delete POS for your own branch',
-      );
-    }
-
     return this.posService.remove(merchantId, branchId, id);
   }
 
@@ -242,33 +201,6 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
   ): Promise<PaymentOrder> {
-    // For ADMIN, verify they can only access payment orders for their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access payment orders for their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own branch',
-      );
-    }
-
-    // For CASHIER, verify they can only access payment orders for their own POS
-    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own POS',
-      );
-    }
-
     return this.paymentOrderService.getCurrent(merchantId, branchId, posId);
   }
 }

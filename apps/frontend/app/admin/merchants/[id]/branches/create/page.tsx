@@ -13,37 +13,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import {
-  ArrowLeft,
-  Building2,
-  Save,
-} from "lucide-react";
+import { ArrowLeft, Building2, Save } from "lucide-react";
 import merchantApi, { CreateBranchDto } from "@/lib/merchant-api";
 import { withNextAuth } from "@/components/withNextAuth";
-import { useToast } from "@/hooks/use-toast";
+import { showToast } from "@/components/ui/toast";
+
+// Form interface that matches what the user sees
+interface BranchFormData {
+  name: string;
+  address: string;
+  contactName: string;
+  contactPhone: string;
+}
 
 function CreateBranchPage() {
   const router = useRouter();
   const params = useParams();
   const merchantId = params.id as string;
-  const { toast } = useToast();
 
-  const [formData, setFormData] = useState<CreateBranchDto>({
+  const [formData, setFormData] = useState<BranchFormData>({
     name: "",
     address: "",
-    contactEmail: "",
+    contactName: "",
     contactPhone: "",
-    isActive: true,
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleInputChange = (field: keyof CreateBranchDto, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof BranchFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -58,8 +59,8 @@ function CreateBranchPage() {
       newErrors.address = "Address is required";
     }
 
-    if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
-      newErrors.contactEmail = "Please enter a valid email address";
+    if (!formData.contactName?.trim()) {
+      newErrors.contactName = "Contact name is required";
     }
 
     setErrors(newErrors);
@@ -75,19 +76,21 @@ function CreateBranchPage() {
 
     try {
       setSaving(true);
-      await merchantApi.createBranch(merchantId, formData);
-      toast({
-        title: "Success",
-        description: "Branch created successfully",
-      });
+
+      // Map form data to backend DTO
+      const createBranchDto: CreateBranchDto = {
+        name: formData.name,
+        address: formData.address,
+        contactName: formData.contactName,
+        contactPhone: formData.contactPhone,
+      };
+
+      await merchantApi.createBranch(merchantId, createBranchDto);
+      showToast.success("Branch created successfully");
       router.push(`/admin/merchants/${merchantId}`);
     } catch (error) {
       console.error("Error creating branch:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create branch",
-        variant: "destructive",
-      });
+      showToast.error("Failed to create branch");
     } finally {
       setSaving(false);
     }
@@ -138,7 +141,9 @@ function CreateBranchPage() {
                     className={errors.name ? "border-destructive" : ""}
                   />
                   {errors.name && (
-                    <p className="text-sm text-destructive mt-1">{errors.name}</p>
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.name}
+                    </p>
                   )}
                 </div>
 
@@ -149,28 +154,37 @@ function CreateBranchPage() {
                   <Textarea
                     id="address"
                     value={formData.address}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
                     placeholder="Street address, City, State, ZIP"
                     rows={3}
                     className={errors.address ? "border-destructive" : ""}
                   />
                   {errors.address && (
-                    <p className="text-sm text-destructive mt-1">{errors.address}</p>
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.address}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="contactEmail">Contact Email</Label>
+                  <Label htmlFor="contactName">
+                    Contact Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => handleInputChange("contactEmail", e.target.value)}
-                    placeholder="branch@example.com"
-                    className={errors.contactEmail ? "border-destructive" : ""}
+                    id="contactName"
+                    value={formData.contactName}
+                    onChange={(e) =>
+                      handleInputChange("contactName", e.target.value)
+                    }
+                    placeholder="e.g., John Doe, Manager"
+                    className={errors.contactName ? "border-destructive" : ""}
                   />
-                  {errors.contactEmail && (
-                    <p className="text-sm text-destructive mt-1">{errors.contactEmail}</p>
+                  {errors.contactName && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.contactName}
+                    </p>
                   )}
                 </div>
 
@@ -179,22 +193,10 @@ function CreateBranchPage() {
                   <Input
                     id="contactPhone"
                     value={formData.contactPhone}
-                    onChange={(e) => handleInputChange("contactPhone", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("contactPhone", e.target.value)
+                    }
                     placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="isActive">Active Status</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Whether this branch is currently active and operational
-                    </p>
-                  </div>
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => handleInputChange("isActive", checked)}
                   />
                 </div>
               </div>

@@ -11,8 +11,7 @@ import {
 import { v7 as uuidv7 } from 'uuid';
 import { Branch } from './branch.entity';
 import { Pos } from './pos.entity';
-import { Transaction } from 'src/transactions/transaction.entity';
-import { PaymentOrderStatus } from 'src/shared/enums/payment-order-status.enum';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
 @Entity('payment_orders')
 export class PaymentOrder {
@@ -38,8 +37,8 @@ export class PaymentOrder {
   @ManyToOne(() => Pos, { nullable: false })
   pos: Pos;
 
-  @OneToMany(() => Transaction, (tx) => tx.paymentOrder)
-  transactions: Transaction[];
+  @OneToMany('Transaction', (tx: any) => tx.paymentOrder)
+  transactions: any[];
 
   @CreateDateColumn()
   createdAt: Date;

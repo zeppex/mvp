@@ -34,6 +34,10 @@ export interface Pos {
   id: string;
   name: string;
   description: string;
+  serialNumber?: string;
+  status?: "online" | "offline" | "maintenance";
+  location?: string;
+  lastSeen?: Date;
   isActive: boolean;
   branch: {
     id: string;
@@ -96,6 +100,7 @@ const merchantApi = {
 
   getMerchant: async (id: string): Promise<Merchant> => {
     const response = await apiClient.get(`/merchants/${id}`);
+    console.log("🚀 Fetched merchant:", response.data);
     return response.data;
   },
 
@@ -148,8 +153,10 @@ const merchantApi = {
     return response.data;
   },
 
-  getBranch: async (branchId: string): Promise<Branch> => {
-    const response = await apiClient.get(`/branches/${branchId}`);
+  getBranch: async (merchantId: string, branchId: string): Promise<Branch> => {
+    const response = await apiClient.get(
+      `/merchants/${merchantId}/branches/${branchId}`
+    );
     return response.data;
   },
 
@@ -165,22 +172,29 @@ const merchantApi = {
   },
 
   updateBranch: async (
+    merchantId: string,
     branchId: string,
     branch: UpdateBranchDto
   ): Promise<Branch> => {
-    const response = await apiClient.put(`/branches/${branchId}`, branch);
+    const response = await apiClient.put(
+      `/merchants/${merchantId}/branches/${branchId}`,
+      branch
+    );
     return response.data;
   },
 
-  deleteBranch: async (branchId: string): Promise<void> => {
-    await apiClient.delete(`/branches/${branchId}`);
+  deleteBranch: async (merchantId: string, branchId: string): Promise<void> => {
+    await apiClient.delete(`/merchants/${merchantId}/branches/${branchId}`);
   },
 
   // POS CRUD operations (with branch context)
   getAllPos: async (merchantId: string, branchId: string): Promise<Pos[]> => {
+    console.log(
+      `Fetching POS devices for merchant ${merchantId}, branch ${branchId}`);
     const response = await apiClient.get(
       `/merchants/${merchantId}/branches/${branchId}/pos`
     );
+     console.log(response.data);
     return response.data;
   },
 
@@ -228,6 +242,14 @@ const merchantApi = {
     await apiClient.delete(
       `/merchants/${merchantId}/branches/${branchId}/pos/${posId}`
     );
+  },
+
+  // Alias methods for backward compatibility
+  getPosDevices: async (
+    merchantId: string,
+    branchId: string
+  ): Promise<Pos[]> => {
+    return merchantApi.getAllPos(merchantId, branchId);
   },
 };
 

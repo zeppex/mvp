@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Branch } from '../entities/branch.entity';
-import { CreateBranchDto } from '../dto';
+import { CreateBranchDto, UpdateBranchDto } from '../dto';
 import { MerchantService } from './merchant.service';
 
 @Injectable()
@@ -56,6 +56,13 @@ export class BranchService {
     }
 
     return branch;
+  }
+
+  async update(id: string, updateBranchDto: UpdateBranchDto): Promise<Branch> {
+    const branch = await this.findOne(id);
+
+    Object.assign(branch, updateBranchDto);
+    return this.branchRepository.save(branch);
   }
 
   async remove(id: string): Promise<void> {

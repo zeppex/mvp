@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,14 +61,13 @@ import {
 } from "lucide-react";
 import merchantApi, { Branch, Pos, UpdateBranchDto } from "@/lib/merchant-api";
 import { withNextAuth } from "@/components/withNextAuth";
-import { useToast } from "@/hooks/use-toast";
+import { showToast } from "@/components/ui/toast";
 
 function BranchDetailPage() {
   const router = useRouter();
   const params = useParams();
   const merchantId = params.id as string;
   const branchId = params.branchId as string;
-  const { toast } = useToast();
 
   const [branch, setBranch] = useState<Branch | null>(null);
   const [posDevices, setPosDevices] = useState<Pos[]>([]);
@@ -77,55 +76,48 @@ function BranchDetailPage() {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<UpdateBranchDto>({});
 
-  useEffect(() => {
-    loadBranchData();
-  }, [branchId]);
-
-  const loadBranchData = async () => {
+  const loadBranchData = useCallback(async () => {
     try {
       setLoading(true);
       const [branchData, posData] = await Promise.all([
         merchantApi.getBranch(merchantId, branchId),
-        merchantApi.getPosDevices(merchantId, branchId)
+        merchantApi.getPosDevices(merchantId, branchId),
       ]);
       setBranch(branchData);
       setPosDevices(posData);
       setFormData({
         name: branchData.name,
         address: branchData.address,
-        contactEmail: branchData.contactEmail,
+        contactName: branchData.contactName,
         contactPhone: branchData.contactPhone,
         isActive: branchData.isActive,
       });
     } catch (error) {
       console.error("Error loading branch data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load branch data",
-        variant: "destructive",
-      });
+      showToast.error("Failed to load branch data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [merchantId, branchId]);
+
+  useEffect(() => {
+    loadBranchData();
+  }, [loadBranchData]);
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const updatedBranch = await merchantApi.updateBranch(merchantId, branchId, formData);
+      const updatedBranch = await merchantApi.updateBranch(
+        merchantId,
+        branchId,
+        formData
+      );
       setBranch(updatedBranch);
       setEditing(false);
-      toast({
-        title: "Success",
-        description: "Branch updated successfully",
-      });
+      showToast.success("Branch updated successfully");
     } catch (error) {
       console.error("Error updating branch:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update branch",
-        variant: "destructive",
-      });
+      showToast.error("Failed to update branch");
     } finally {
       setSaving(false);
     }
@@ -134,23 +126,19 @@ function BranchDetailPage() {
   const handleDelete = async () => {
     try {
       await merchantApi.deleteBranch(merchantId, branchId);
-      toast({
-        title: "Success",
-        description: "Branch deleted successfully",
-      });
+      showToast.success("Branch deleted successfully");
       router.push(`/admin/merchants/${merchantId}`);
     } catch (error) {
       console.error("Error deleting branch:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete branch",
-        variant: "destructive",
-      });
+      showToast.error("Failed to delete branch");
     }
   };
 
-  const handleInputChange = (field: keyof UpdateBranchDto, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field: keyof UpdateBranchDto,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
@@ -159,7 +147,9 @@ function BranchDetailPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading branch details...</p>
+            <p className="mt-2 text-muted-foreground">
+              Loading branch details...
+            </p>
           </div>
         </div>
       </div>
@@ -170,9 +160,16 @@ function BranchDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive">Branch Not Found</h1>
-          <p className="text-muted-foreground mt-2">The requested branch could not be found.</p>
-          <Button onClick={() => router.push(`/admin/merchants/${merchantId}`)} className="mt-4">
+          <h1 className="text-2xl font-bold text-destructive">
+            Branch Not Found
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            The requested branch could not be found.
+          </p>
+          <Button
+            onClick={() => router.push(`/admin/merchants/${merchantId}`)}
+            className="mt-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Merchant
           </Button>
@@ -210,7 +207,7 @@ function BranchDetailPage() {
                   setFormData({
                     name: branch.name,
                     address: branch.address,
-                    contactEmail: branch.contactEmail,
+                    contactName: branch.contactName,
                     contactPhone: branch.contactPhone,
                     isActive: branch.isActive,
                   });
@@ -241,12 +238,17 @@ function BranchDetailPage() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Branch</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to delete "{branch.name}"? This action cannot be undone and will also delete all associated POS systems.
+                      Are you sure you want to delete &quot;{branch.name}&quot;?
+                      This action cannot be undone and will also delete all
+                      associated POS systems.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
                       Delete Branch
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -281,7 +283,9 @@ function BranchDetailPage() {
                     placeholder="Branch name"
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground mt-1">{branch.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {branch.name}
+                  </p>
                 )}
               </div>
 
@@ -291,35 +295,44 @@ function BranchDetailPage() {
                   <Textarea
                     id="address"
                     value={formData.address || ""}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
                     placeholder="Street address, City, State, ZIP"
                     rows={3}
                   />
                 ) : (
                   <div className="flex items-start mt-1">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-0.5" />
-                    <p className="text-sm text-muted-foreground">{branch.address}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {branch.address}
+                    </p>
                   </div>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="email">Contact Email</Label>
+                <Label htmlFor="contactName">Contact Name</Label>
                 {editing ? (
                   <Input
-                    id="email"
-                    type="email"
-                    value={formData.contactEmail || ""}
-                    onChange={(e) => handleInputChange("contactEmail", e.target.value)}
-                    placeholder="contact@example.com"
+                    id="contactName"
+                    value={formData.contactName || ""}
+                    onChange={(e) =>
+                      handleInputChange("contactName", e.target.value)
+                    }
+                    placeholder="Contact person name"
                   />
-                ) : branch.contactEmail ? (
+                ) : branch.contactName ? (
                   <div className="flex items-center mt-1">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{branch.contactEmail}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {branch.contactName}
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground mt-1">No email provided</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No contact name provided
+                  </p>
                 )}
               </div>
 
@@ -329,16 +342,22 @@ function BranchDetailPage() {
                   <Input
                     id="phone"
                     value={formData.contactPhone || ""}
-                    onChange={(e) => handleInputChange("contactPhone", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("contactPhone", e.target.value)
+                    }
                     placeholder="+1 (555) 123-4567"
                   />
                 ) : branch.contactPhone ? (
                   <div className="flex items-center mt-1">
                     <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{branch.contactPhone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {branch.contactPhone}
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground mt-1">No phone provided</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No phone provided
+                  </p>
                 )}
               </div>
 
@@ -348,7 +367,9 @@ function BranchDetailPage() {
                   <Switch
                     id="active"
                     checked={formData.isActive ?? branch.isActive}
-                    onCheckedChange={(checked) => handleInputChange("isActive", checked)}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("isActive", checked)
+                    }
                   />
                 ) : (
                   <Badge variant={branch.isActive ? "default" : "secondary"}>
@@ -385,9 +406,7 @@ function BranchDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Statistics</CardTitle>
-            <CardDescription>
-              Overview of branch activity
-            </CardDescription>
+            <CardDescription>Overview of branch activity</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -402,7 +421,7 @@ function BranchDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Active POS Devices</p>
                   <p className="text-2xl font-bold">
-                    {posDevices.filter(pos => pos.isActive).length}
+                    {posDevices.filter((pos) => pos.isActive).length}
                   </p>
                 </div>
                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -411,7 +430,7 @@ function BranchDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Online Devices</p>
                   <p className="text-2xl font-bold">
-                    {posDevices.filter(pos => pos.status === 'online').length}
+                    {posDevices.filter((pos) => pos.status === "online").length}
                   </p>
                 </div>
                 <div className="h-2 w-2 rounded-full bg-blue-500"></div>
@@ -431,7 +450,13 @@ function BranchDetailPage() {
                 Manage POS devices for this branch
               </CardDescription>
             </div>
-            <Button onClick={() => router.push(`/admin/merchants/${merchantId}/branches/${branchId}/pos/create`)}>
+            <Button
+              onClick={() =>
+                router.push(
+                  `/admin/merchants/${merchantId}/branches/${branchId}/pos/create`
+                )
+              }
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add POS Device
             </Button>
@@ -441,11 +466,19 @@ function BranchDetailPage() {
           {posDevices.length === 0 ? (
             <div className="text-center py-8">
               <Monitor className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No POS devices found</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No POS devices found
+              </h3>
               <p className="text-muted-foreground mb-4">
-                This branch doesn't have any POS devices yet.
+                This branch does not have any POS devices yet.
               </p>
-              <Button onClick={() => router.push(`/admin/merchants/${merchantId}/branches/${branchId}/pos/create`)}>
+              <Button
+                onClick={() =>
+                  router.push(
+                    `/admin/merchants/${merchantId}/branches/${branchId}/pos/create`
+                  )
+                }
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First POS Device
               </Button>
@@ -469,7 +502,15 @@ function BranchDetailPage() {
                     <TableCell>{pos.serialNumber}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Badge variant={pos.status === 'online' ? "default" : pos.status === 'offline' ? "destructive" : "secondary"}>
+                        <Badge
+                          variant={
+                            pos.status === "online"
+                              ? "default"
+                              : pos.status === "offline"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
                           {pos.status}
                         </Badge>
                         {!pos.isActive && (
@@ -479,7 +520,9 @@ function BranchDetailPage() {
                     </TableCell>
                     <TableCell>{pos.location || "Not specified"}</TableCell>
                     <TableCell>
-                      {pos.lastSeen ? new Date(pos.lastSeen).toLocaleString() : "Never"}
+                      {pos.lastSeen
+                        ? new Date(pos.lastSeen).toLocaleString()
+                        : "Never"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -491,7 +534,11 @@ function BranchDetailPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() => router.push(`/admin/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/admin/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`
+                              )
+                            }
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             View Details

@@ -4,14 +4,32 @@ import {
   PrimaryColumn,
   BeforeInsert,
   ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
 import { Merchant } from '../merchant/entities/merchant.entity';
 import { Branch } from '../merchant/entities/branch.entity';
 import { Pos } from '../merchant/entities/pos.entity';
-import { PaymentOrder } from '../merchant/entities/payment-order.entity';
 
-//TODO agregar userID, fechas, tipado de datos
+import { User } from '../user/entities/user.entity';
+
+export enum TransactionStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+}
+
+export enum ExchangeType {
+  BINANCE = 'binance',
+  COINBASE = 'coinbase',
+  KRAKEN = 'kraken',
+  // Add more exchanges as needed
+}
+
 @Entity('transactions')
 export class Transaction {
   @PrimaryColumn('uuid')
@@ -23,34 +41,77 @@ export class Transaction {
   })
   date: Date;
 
-  @Column()
-  status: string;
+  @Column({
+    type: 'enum',
+    enum: TransactionStatus,
+    default: TransactionStatus.PENDING,
+  })
+  status: TransactionStatus;
 
   @ManyToOne(() => Merchant, { nullable: false })
+  @JoinColumn({ name: 'merchantId' })
   merchant: Merchant;
 
+  @Column('uuid')
+  merchantId: string;
+
   @ManyToOne(() => Branch, { nullable: false })
+  @JoinColumn({ name: 'branchId' })
   branch: Branch;
 
+  @Column('uuid')
+  branchId: string;
+
   @ManyToOne(() => Pos, { nullable: false })
+  @JoinColumn({ name: 'posId' })
   pos: Pos;
 
-  @ManyToOne(() => PaymentOrder, (order) => order.transactions, {
+  @Column('uuid')
+  posId: string;
+
+  @ManyToOne('PaymentOrder', (order: any) => order.transactions, {
     nullable: true,
   })
-  paymentOrder: PaymentOrder;
+  @JoinColumn({ name: 'paymentOrderId' })
+  paymentOrder: any;
+
+  @Column('uuid', { nullable: true })
+  paymentOrderId: string;
 
   @Column('decimal', { precision: 18, scale: 8 })
   amount: string;
 
-  @Column()
-  exchange: string;
+  @Column({
+    type: 'enum',
+    enum: ExchangeType,
+    default: ExchangeType.BINANCE,
+  })
+  exchange: ExchangeType;
 
-  @Column()
+  @Column({ type: 'text' })
   description: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @Column('uuid', { nullable: true })
   userId: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any>;
+
+  @Column({ type: 'text', nullable: true })
+  externalTransactionId: string;
+
+  @Column({ type: 'text', nullable: true })
+  errorMessage: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @BeforeInsert()
   generateId() {

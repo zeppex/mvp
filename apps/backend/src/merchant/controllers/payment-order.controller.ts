@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Body,
   Delete,
@@ -11,7 +12,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PaymentOrderService } from '../services/payment-order.service';
-import { CreatePaymentOrderDto } from '../dto';
+import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { PaymentOrder } from '../entities/payment-order.entity';
 import {
   ApiTags,
@@ -23,13 +24,14 @@ import {
 } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { MerchantGuard } from '../../auth/guards/merchant.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('payment-orders')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
 @Controller('merchants/:merchantId/branches/:branchId/pos/:posId/orders')
 export class PaymentOrderController {
   constructor(private readonly orderService: PaymentOrderService) {}
@@ -65,35 +67,17 @@ export class PaymentOrderController {
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Body() dto: CreatePaymentOrderDto,
     @Request() req,
-  ): Promise<PaymentOrder> {
-    // For ADMIN, verify they can only access their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only create payment orders for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only create payment orders for your own branch',
-      );
-    }
-
-    // For CASHIER, verify they can only access their own POS
-    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
-      throw new ForbiddenException(
-        'You can only create payment orders for your own POS',
-      );
-    }
-
-    return this.orderService.create(merchantId, branchId, posId, dto);
+  ): Promise<any> {
+    const order = await this.orderService.create(
+      merchantId,
+      branchId,
+      posId,
+      dto,
+    );
+    return {
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    };
   }
 
   @Get()
@@ -119,35 +103,12 @@ export class PaymentOrderController {
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
-  ): Promise<PaymentOrder[]> {
-    // For ADMIN, verify they can only access their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own branch',
-      );
-    }
-
-    // For CASHIER, verify they can only access their own POS
-    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own POS',
-      );
-    }
-
-    return this.orderService.findAll(merchantId, branchId, posId);
+  ): Promise<any[]> {
+    const orders = await this.orderService.findAll(merchantId, branchId, posId);
+    return orders.map((order) => ({
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    }));
   }
 
   @Get(':id')
@@ -176,35 +137,65 @@ export class PaymentOrderController {
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
-  ): Promise<PaymentOrder> {
-    // For ADMIN, verify they can only access their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own merchant',
-      );
-    }
+  ): Promise<any> {
+    const order = await this.orderService.findOne(
+      merchantId,
+      branchId,
+      posId,
+      id,
+    );
+    return {
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    };
+  }
 
-    // For BRANCH_ADMIN, verify they can only access their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own branch',
-      );
-    }
-
-    // For CASHIER, verify they can only access their own POS
-    if (req.user.role === UserRole.CASHIER && posId !== req.user.posId) {
-      throw new ForbiddenException(
-        'You can only access payment orders for your own POS',
-      );
-    }
-
-    return this.orderService.findOne(merchantId, branchId, posId, id);
+  @Put(':id')
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.ADMIN,
+    UserRole.BRANCH_ADMIN,
+    UserRole.CASHIER,
+  )
+  @ApiOperation({ summary: 'Update a payment order by ID' })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
+  @ApiBody({ type: UpdatePaymentOrderDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment order successfully updated.',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  async update(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('posId', new ParseUUIDPipe()) posId: UUID,
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Body() updatePaymentOrderDto: UpdatePaymentOrderDto,
+    @Request() req,
+  ): Promise<any> {
+    const order = await this.orderService.update(
+      merchantId,
+      branchId,
+      posId,
+      id,
+      updatePaymentOrderDto,
+    );
+    return {
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    };
   }
 
   @Delete(':id')
@@ -231,26 +222,6 @@ export class PaymentOrderController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    // For ADMIN, verify they can only access their own merchant
-    if (
-      req.user.role === UserRole.ADMIN &&
-      merchantId !== req.user.merchantId
-    ) {
-      throw new ForbiddenException(
-        'You can only delete payment orders for your own merchant',
-      );
-    }
-
-    // For BRANCH_ADMIN, verify they can only access their own branch
-    if (
-      req.user.role === UserRole.BRANCH_ADMIN &&
-      branchId !== req.user.branchId
-    ) {
-      throw new ForbiddenException(
-        'You can only delete payment orders for your own branch',
-      );
-    }
-
     return this.orderService.remove(merchantId, branchId, posId, id);
   }
 }

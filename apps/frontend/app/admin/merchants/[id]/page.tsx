@@ -58,15 +58,19 @@ import {
   Save,
   X,
 } from "lucide-react";
-import merchantApi, { Merchant, Branch, UpdateMerchantDto } from "@/lib/merchant-api";
+import merchantApi, {
+  Merchant,
+  Branch,
+  UpdateMerchantDto,
+} from "@/lib/merchant-api";
 import { withNextAuth } from "@/components/withNextAuth";
-import { useToast } from "@/hooks/use-toast";
+import { showToast } from "@/components/ui/toast";
+import { UserRole } from "@/types/enums";
 
 function MerchantDetailPage() {
   const router = useRouter();
   const params = useParams();
   const merchantId = params.id as string;
-  const { toast } = useToast();
 
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -76,54 +80,82 @@ function MerchantDetailPage() {
   const [formData, setFormData] = useState<UpdateMerchantDto>({});
 
   useEffect(() => {
+    if (!merchantId) return;
+
+    const loadMerchantData = async () => {
+      try {
+        setLoading(true);
+        console.log("🔍 Loading merchant data for ID:", merchantId);
+
+        // Load merchant data first
+        const merchantData = await merchantApi.getMerchant(merchantId);
+        console.log("✅ Merchant data received:", merchantData);
+
+        setMerchant(merchantData);
+        setFormData({
+          name: merchantData.name,
+          contact: merchantData.contact,
+          contactName: merchantData.contactName,
+          contactPhone: merchantData.contactPhone,
+          address: merchantData.address,
+          isActive: merchantData.isActive,
+        });
+
+        // Load branches data separately - don't fail if this fails
+        try {
+          const branchesData = await merchantApi.getAllBranches(merchantId);
+          console.log("✅ Branches data received:", branchesData);
+          setBranches(branchesData);
+        } catch (branchError) {
+          console.warn(
+            "⚠️ Failed to load branches, but merchant data loaded successfully:",
+            branchError
+          );
+          setBranches([]); // Set empty branches array
+        }
+      } catch (error: unknown) {
+        console.error("❌ Error loading merchant data:", error);
+
+        const axiosError = error as {
+          response?: { status?: number; data?: unknown };
+          message?: string;
+        };
+        console.error(
+          "❌ Error details:",
+          axiosError.response?.data || axiosError.message
+        );
+        console.error("❌ Status code:", axiosError.response?.status);
+
+        if (axiosError.response?.status === 401) {
+          showToast.error("Authentication required. Please log in.");
+        } else if (axiosError.response?.status === 403) {
+          showToast.error("Access denied. Insufficient permissions.");
+        } else if (axiosError.response?.status === 404) {
+          showToast.error("Merchant not found.");
+        } else {
+          showToast.error("Failed to load merchant data");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadMerchantData();
   }, [merchantId]);
-
-  const loadMerchantData = async () => {
-    try {
-      setLoading(true);
-      const [merchantData, branchesData] = await Promise.all([
-        merchantApi.getMerchant(merchantId),
-        merchantApi.getBranches(merchantId)
-      ]);
-      setMerchant(merchantData);
-      setBranches(branchesData);
-      setFormData({
-        name: merchantData.name,
-        contactEmail: merchantData.contactEmail,
-        contactPhone: merchantData.contactPhone,
-        address: merchantData.address,
-        isActive: merchantData.isActive,
-      });
-    } catch (error) {
-      console.error("Error loading merchant data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load merchant data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const updatedMerchant = await merchantApi.updateMerchant(merchantId, formData);
+      const updatedMerchant = await merchantApi.updateMerchant(
+        merchantId,
+        formData
+      );
       setMerchant(updatedMerchant);
       setEditing(false);
-      toast({
-        title: "Success",
-        description: "Merchant updated successfully",
-      });
+      showToast.success("Merchant updated successfully");
     } catch (error) {
       console.error("Error updating merchant:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update merchant",
-        variant: "destructive",
-      });
+      showToast.error("Failed to update merchant");
     } finally {
       setSaving(false);
     }
@@ -132,23 +164,19 @@ function MerchantDetailPage() {
   const handleDelete = async () => {
     try {
       await merchantApi.deleteMerchant(merchantId);
-      toast({
-        title: "Success",
-        description: "Merchant deleted successfully",
-      });
+      showToast.success("Merchant deleted successfully");
       router.push("/admin/merchants");
     } catch (error) {
       console.error("Error deleting merchant:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete merchant",
-        variant: "destructive",
-      });
+      showToast.error("Failed to delete merchant");
     }
   };
 
-  const handleInputChange = (field: keyof UpdateMerchantDto, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field: keyof UpdateMerchantDto,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
@@ -157,7 +185,9 @@ function MerchantDetailPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading merchant details...</p>
+            <p className="mt-2 text-muted-foreground">
+              Loading merchant details...
+            </p>
           </div>
         </div>
       </div>
@@ -168,9 +198,16 @@ function MerchantDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive">Merchant Not Found</h1>
-          <p className="text-muted-foreground mt-2">The requested merchant could not be found.</p>
-          <Button onClick={() => router.push("/admin/merchants")} className="mt-4">
+          <h1 className="text-2xl font-bold text-destructive">
+            Merchant Not Found
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            The requested merchant could not be found.
+          </p>
+          <Button
+            onClick={() => router.push("/admin/merchants")}
+            className="mt-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Merchants
           </Button>
@@ -193,9 +230,6 @@ function MerchantDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{merchant.name}</h1>
-            <p className="text-muted-foreground">
-              Tenant: {merchant.tenant.name}
-            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -207,7 +241,8 @@ function MerchantDetailPage() {
                   setEditing(false);
                   setFormData({
                     name: merchant.name,
-                    contactEmail: merchant.contactEmail,
+                    contact: merchant.contact,
+                    contactName: merchant.contactName,
                     contactPhone: merchant.contactPhone,
                     address: merchant.address,
                     isActive: merchant.isActive,
@@ -239,12 +274,17 @@ function MerchantDetailPage() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Merchant</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to delete "{merchant.name}"? This action cannot be undone and will also delete all associated branches and POS systems.
+                      Are you sure you want to delete &quot;{merchant.name}
+                      &quot;? This action cannot be undone and will also delete
+                      all associated branches and POS systems.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
                       Delete Merchant
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -279,7 +319,9 @@ function MerchantDetailPage() {
                     placeholder="Merchant name"
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground mt-1">{merchant.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {merchant.name}
+                  </p>
                 )}
               </div>
 
@@ -289,15 +331,37 @@ function MerchantDetailPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={formData.contactEmail || ""}
-                    onChange={(e) => handleInputChange("contactEmail", e.target.value)}
+                    value={formData.contact || ""}
+                    onChange={(e) =>
+                      handleInputChange("contact", e.target.value)
+                    }
                     placeholder="contact@example.com"
                   />
                 ) : (
                   <div className="flex items-center mt-1">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{merchant.contactEmail}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {merchant.contact}
+                    </p>
                   </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="contactName">Contact Name</Label>
+                {editing ? (
+                  <Input
+                    id="contactName"
+                    value={formData.contactName || ""}
+                    onChange={(e) =>
+                      handleInputChange("contactName", e.target.value)
+                    }
+                    placeholder="Contact person name"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {merchant.contactName}
+                  </p>
                 )}
               </div>
 
@@ -307,13 +371,17 @@ function MerchantDetailPage() {
                   <Input
                     id="phone"
                     value={formData.contactPhone || ""}
-                    onChange={(e) => handleInputChange("contactPhone", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("contactPhone", e.target.value)
+                    }
                     placeholder="+1 (555) 123-4567"
                   />
                 ) : (
                   <div className="flex items-center mt-1">
                     <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{merchant.contactPhone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {merchant.contactPhone}
+                    </p>
                   </div>
                 )}
               </div>
@@ -324,14 +392,18 @@ function MerchantDetailPage() {
                   <Textarea
                     id="address"
                     value={formData.address || ""}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
                     placeholder="Street address, City, State, ZIP"
                     rows={3}
                   />
                 ) : (
                   <div className="flex items-start mt-1">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-0.5" />
-                    <p className="text-sm text-muted-foreground">{merchant.address}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {merchant.address}
+                    </p>
                   </div>
                 )}
               </div>
@@ -342,7 +414,9 @@ function MerchantDetailPage() {
                   <Switch
                     id="active"
                     checked={formData.isActive ?? merchant.isActive}
-                    onCheckedChange={(checked) => handleInputChange("isActive", checked)}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("isActive", checked)
+                    }
                   />
                 ) : (
                   <Badge variant={merchant.isActive ? "default" : "secondary"}>
@@ -379,9 +453,7 @@ function MerchantDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Statistics</CardTitle>
-            <CardDescription>
-              Overview of merchant activity
-            </CardDescription>
+            <CardDescription>Overview of merchant activity</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -396,7 +468,7 @@ function MerchantDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Active Branches</p>
                   <p className="text-2xl font-bold">
-                    {branches.filter(b => b.isActive).length}
+                    {branches.filter((b) => b.isActive).length}
                   </p>
                 </div>
                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -405,7 +477,10 @@ function MerchantDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Total POS Systems</p>
                   <p className="text-2xl font-bold">
-                    {branches.reduce((total, branch) => total + (branch.posDevices?.length || 0), 0)}
+                    {branches.reduce(
+                      (total, branch) => total + (branch.pos?.length || 0),
+                      0
+                    )}
                   </p>
                 </div>
                 <Settings className="h-8 w-8 text-muted-foreground" />
@@ -425,7 +500,11 @@ function MerchantDetailPage() {
                 Manage branches for this merchant
               </CardDescription>
             </div>
-            <Button onClick={() => router.push(`/admin/merchants/${merchantId}/branches/create`)}>
+            <Button
+              onClick={() =>
+                router.push(`/admin/merchants/${merchantId}/branches/create`)
+              }
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Branch
             </Button>
@@ -437,9 +516,13 @@ function MerchantDetailPage() {
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No branches found</h3>
               <p className="text-muted-foreground mb-4">
-                This merchant doesn't have any branches yet.
+                This merchant doesn&apos;t have any branches yet.
               </p>
-              <Button onClick={() => router.push(`/admin/merchants/${merchantId}/branches/create`)}>
+              <Button
+                onClick={() =>
+                  router.push(`/admin/merchants/${merchantId}/branches/create`)
+                }
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Branch
               </Button>
@@ -463,12 +546,10 @@ function MerchantDetailPage() {
                     <TableCell>{branch.address}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {branch.contactEmail && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {branch.contactEmail}
-                          </div>
-                        )}
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {branch.contactName}
+                        </div>
                         {branch.contactPhone && (
                           <div className="flex items-center text-sm text-muted-foreground">
                             <Phone className="h-3 w-3 mr-1" />
@@ -479,11 +560,13 @@ function MerchantDetailPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {branch.posDevices?.length || 0} devices
+                        {branch.pos?.length || 0} devices
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={branch.isActive ? "default" : "secondary"}>
+                      <Badge
+                        variant={branch.isActive ? "default" : "secondary"}
+                      >
                         {branch.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -497,13 +580,21 @@ function MerchantDetailPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() => router.push(`/admin/merchants/${merchantId}/branches/${branch.id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/admin/merchants/${merchantId}/branches/${branch.id}`
+                              )
+                            }
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => router.push(`/admin/merchants/${merchantId}/branches/${branch.id}/pos`)}
+                            onClick={() =>
+                              router.push(
+                                `/admin/merchants/${merchantId}/branches/${branch.id}/pos`
+                              )
+                            }
                           >
                             <Settings className="h-4 w-4 mr-2" />
                             Manage POS
@@ -527,4 +618,6 @@ function MerchantDetailPage() {
   );
 }
 
-export default withNextAuth(MerchantDetailPage);
+export default withNextAuth(MerchantDetailPage, {
+  requiredRoles: [UserRole.SUPERADMIN, UserRole.ADMIN],
+});

@@ -31,7 +31,13 @@ export class UserController {
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
   async create(@Body() createUserDto: CreateUserDto, @Request() req) {
     // Creation logic is now fully handled by the service with proper validation
-    return this.userService.create(createUserDto, req.user);
+    const user = await this.userService.create(createUserDto, req.user);
+    return {
+      ...user,
+      merchantId: user.merchant?.id,
+      branchId: user.branch?.id,
+      posId: user.pos?.id,
+    };
   }
 
   @Get()
