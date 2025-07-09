@@ -18,11 +18,20 @@ export class Pos {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  originalName: string;
+
   @Column()
   description: string;
 
+  @Column({ nullable: true })
+  qrCode: string;
+
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deactivatedAt: Date;
 
   @ManyToOne(() => Branch, (branch) => branch.pos, { onDelete: 'CASCADE' })
   branch: Branch;
@@ -36,5 +45,12 @@ export class Pos {
   @BeforeInsert()
   generateId() {
     this.id = uuidv7();
+  }
+
+  deactivate(): void {
+    this.isActive = false;
+    this.deactivatedAt = new Date();
+    this.originalName = this.name;
+    this.name = `${this.name}-DEACTIVATED`;
   }
 }

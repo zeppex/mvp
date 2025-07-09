@@ -153,12 +153,13 @@ export class TransactionService {
         }
       }
 
-      const result = await this.transactionRepository.delete(id);
-      if (result.affected === 0) {
-        throw new NotFoundException(`Transaction ${id} not found`);
-      }
+      const transaction = await this.findOne(id, merchantId);
 
-      this.logger.log(`Transaction ${id} deleted successfully`);
+      // Cancel the transaction instead of deleting it
+      transaction.status = TransactionStatus.CANCELLED;
+      await this.transactionRepository.save(transaction);
+
+      this.logger.log(`Transaction ${id} cancelled successfully`);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -167,7 +168,7 @@ export class TransactionService {
         throw error;
       }
       this.logger.error(
-        `Failed to delete transaction ${id}: ${error.message}`,
+        `Failed to cancel transaction ${id}: ${error.message}`,
         error.stack,
       );
       throw error;

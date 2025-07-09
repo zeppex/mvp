@@ -1,5 +1,8 @@
 export enum PaymentOrderStatus {
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
 }

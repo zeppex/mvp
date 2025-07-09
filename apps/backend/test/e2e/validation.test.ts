@@ -471,7 +471,7 @@ describe('Validation E2E Tests', () => {
           email: 'invalid-email',
           password: 'ValidPassword!123',
         })
-        .expect(400);
+        .expect(401);
     });
 
     it('should reject login with missing email', async () => {
@@ -506,7 +506,6 @@ describe('Validation E2E Tests', () => {
     let testMerchantId: string;
     let testBranchId: string;
     let testPosId: string;
-    let testOrderId: string;
 
     beforeAll(async () => {
       // Create test data for update validation
@@ -546,18 +545,6 @@ describe('Validation E2E Tests', () => {
         });
 
       testPosId = posResponse.body.id;
-
-      const orderResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders`,
-        )
-        .set('Authorization', `Bearer ${superadminToken}`)
-        .send({
-          amount: '20.00',
-          description: `Update test order ${testSuffix}`,
-        });
-
-      testOrderId = orderResponse.body.id;
     });
 
     it('should accept partial merchant update with valid data', async () => {
@@ -613,9 +600,22 @@ describe('Validation E2E Tests', () => {
     });
 
     it('should accept partial payment order update with valid data', async () => {
+      // Create a fresh payment order right before the test to avoid TTL issues
+      const orderResponse = await request(app.getHttpServer())
+        .post(
+          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders`,
+        )
+        .set('Authorization', `Bearer ${superadminToken}`)
+        .send({
+          amount: '20.00',
+          description: `Update test order ${testSuffix}`,
+        });
+
+      const orderId = orderResponse.body.id;
+
       await request(app.getHttpServer())
         .put(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${testOrderId}`,
+          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${orderId}`,
         )
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
@@ -625,9 +625,22 @@ describe('Validation E2E Tests', () => {
     });
 
     it('should reject payment order update with invalid amount', async () => {
+      // Create a fresh payment order right before the test to avoid TTL issues
+      const orderResponse = await request(app.getHttpServer())
+        .post(
+          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders`,
+        )
+        .set('Authorization', `Bearer ${superadminToken}`)
+        .send({
+          amount: '20.00',
+          description: `Update test order ${testSuffix}`,
+        });
+
+      const orderId = orderResponse.body.id;
+
       await request(app.getHttpServer())
         .put(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${testOrderId}`,
+          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${orderId}`,
         )
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({

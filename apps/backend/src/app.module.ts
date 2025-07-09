@@ -4,6 +4,9 @@ import { AppService } from './app.service';
 import { ExchangeGwModule } from './exchange-gw/exchange-gw.module';
 import { BinanceClientModule } from './binance-client/binance-client.module';
 import { SharedModule } from './shared/shared.module';
+import { QrCodeModule } from './shared/qr-code.module';
+import { CleanupModule } from './shared/cleanup.module';
+import { SeedModule } from './shared/seed.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MerchantModule } from './merchant/merchant.module';
@@ -36,6 +39,10 @@ import * as Joi from 'joi';
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_ACCESS_TOKEN_EXPIRES_IN: Joi.string().default('15m'),
         JWT_REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('7d'),
+
+        // Payment order configuration
+        PAYMENT_ORDER_TTL: Joi.number().default(120000), // 2 minutes in milliseconds
+        PAYMENT_API_KEY: Joi.string().required(),
 
         // Binance configuration (optional for development)
         BINANCE_API_KEY: Joi.string().optional(),
@@ -74,6 +81,9 @@ import * as Joi from 'joi';
     ExchangeGwModule,
     BinanceClientModule,
     SharedModule,
+    QrCodeModule,
+    CleanupModule,
+    SeedModule,
     UserModule,
     AuthModule,
     MerchantModule,

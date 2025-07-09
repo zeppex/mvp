@@ -31,10 +31,16 @@ export class PaymentOrder {
   })
   status: PaymentOrderStatus;
 
-  @ManyToOne(() => Branch, { nullable: false })
+  @Column({ type: 'timestamp', nullable: true })
+  expiresAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deactivatedAt: Date;
+
+  @ManyToOne(() => Branch, { nullable: false, onDelete: 'CASCADE' })
   branch: Branch;
 
-  @ManyToOne(() => Pos, { nullable: false })
+  @ManyToOne(() => Pos, { nullable: false, onDelete: 'CASCADE' })
   pos: Pos;
 
   @OneToMany('Transaction', (tx: any) => tx.paymentOrder)
@@ -49,5 +55,20 @@ export class PaymentOrder {
   @BeforeInsert()
   generateId() {
     this.id = uuidv7();
+  }
+
+  isExpired(): boolean {
+    return this.expiresAt ? new Date() > this.expiresAt : false;
+  }
+
+  shouldBeCancelled(): boolean {
+    return this.status === PaymentOrderStatus.ACTIVE && this.isExpired();
+  }
+
+  deactivate(): void {
+    this.deactivatedAt = new Date();
+    if (this.status === PaymentOrderStatus.ACTIVE) {
+      this.status = PaymentOrderStatus.CANCELLED;
+    }
   }
 }

@@ -143,22 +143,17 @@ export class MerchantService {
     try {
       const merchant = await this.findOne(id);
 
-      // Check if merchant has active branches
-      if (merchant.branches && merchant.branches.length > 0) {
-        throw new BadRequestException(
-          'Cannot delete merchant with active branches',
-        );
-      }
-
+      // Merchant deletion is hard delete with cascade to all related data
+      // This will cascade to branches, POS, and payment orders due to CASCADE relationships
       const result = await this.merchantRepository.delete(id);
 
       if (result.affected === 0) {
         throw new Exception(CommonErrors.RESOURCE_NOT_FOUND, { id });
       }
 
-      this.logger.log(`Merchant deleted successfully: ${id}`);
+      this.logger.log(`Merchant deleted successfully with cascade: ${id}`);
     } catch (error) {
-      if (error instanceof Exception || error instanceof BadRequestException) {
+      if (error instanceof Exception) {
         throw error;
       }
 

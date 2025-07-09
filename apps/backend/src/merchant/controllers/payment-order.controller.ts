@@ -10,7 +10,11 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  HttpCode,
+  ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { PaymentOrderService } from '../services/payment-order.service';
 import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { PaymentOrder } from '../entities/payment-order.entity';
@@ -65,19 +69,27 @@ export class PaymentOrderController {
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
-    @Body() dto: CreatePaymentOrderDto,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    dto: CreatePaymentOrderDto,
     @Request() req,
   ): Promise<any> {
-    const order = await this.orderService.create(
-      merchantId,
-      branchId,
-      posId,
-      dto,
-    );
-    return {
-      ...order,
-      amount: Number(order.amount).toFixed(2),
-    };
+    try {
+      const order = await this.orderService.create(
+        merchantId,
+        branchId,
+        posId,
+        dto,
+      );
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('Invalid input: ' + error.message);
+      }
+      throw error;
+    }
   }
 
   @Get()
@@ -182,20 +194,28 @@ export class PaymentOrderController {
     @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
-    @Body() updatePaymentOrderDto: UpdatePaymentOrderDto,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    updatePaymentOrderDto: UpdatePaymentOrderDto,
     @Request() req,
   ): Promise<any> {
-    const order = await this.orderService.update(
-      merchantId,
-      branchId,
-      posId,
-      id,
-      updatePaymentOrderDto,
-    );
-    return {
-      ...order,
-      amount: Number(order.amount).toFixed(2),
-    };
+    try {
+      const order = await this.orderService.update(
+        merchantId,
+        branchId,
+        posId,
+        id,
+        updatePaymentOrderDto,
+      );
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('Invalid input: ' + error.message);
+      }
+      throw error;
+    }
   }
 
   @Delete(':id')
@@ -222,6 +242,52 @@ export class PaymentOrderController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    return this.orderService.remove(merchantId, branchId, posId, id);
+    await this.orderService.remove(merchantId, branchId, posId, id);
+  }
+
+  @Post(':id/trigger-in-progress')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Trigger payment order to IN_PROGRESS status (for payment processing)',
+  })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment order status changed to IN_PROGRESS.',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Payment order cannot be processed (expired or wrong status).',
+  })
+  async triggerInProgress(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('posId', new ParseUUIDPipe()) posId: UUID,
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+  ): Promise<any> {
+    const order = await this.orderService.triggerInProgress(
+      merchantId,
+      branchId,
+      posId,
+      id,
+    );
+    return {
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    };
   }
 }

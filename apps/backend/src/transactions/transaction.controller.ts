@@ -96,7 +96,7 @@ export class TransactionController {
 
   @Delete(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a transaction by ID' })
+  @ApiOperation({ summary: 'Cancel a transaction by ID' })
   @ApiParam({
     name: 'id',
     required: true,
@@ -105,14 +105,14 @@ export class TransactionController {
   })
   @ApiResponse({
     status: 204,
-    description: 'Transaction successfully deleted.',
+    description: 'Transaction successfully cancelled.',
   })
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
   remove(
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    // SUPERADMIN can delete all transactions, ADMIN can delete only their merchant's transactions
+    // SUPERADMIN can cancel all transactions, ADMIN can cancel only their merchant's transactions
     const merchantId =
       req.user.role === UserRole.ADMIN ? req.user.merchantId : undefined;
     return this.transactionService.remove(id, merchantId);

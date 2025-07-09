@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { BranchService } from '../services/branch.service';
 import { CreateBranchDto, UpdateBranchDto } from '../dto';
@@ -21,6 +22,7 @@ import {
   ApiParam,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -65,6 +67,12 @@ export class BranchController {
     description: 'ID of the merchant',
     type: 'string',
   })
+  @ApiQuery({
+    name: 'includeDeactivated',
+    required: false,
+    type: Boolean,
+    description: 'Include deactivated branches in the response',
+  })
   @ApiResponse({
     status: 200,
     description: 'Return all branches.',
@@ -73,8 +81,10 @@ export class BranchController {
   async findAll(
     @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Request() req,
+    @Query('includeDeactivated') includeDeactivated?: string,
   ): Promise<Branch[]> {
-    return this.branchService.findAll(merchantId);
+    const includeDeactivatedBool = includeDeactivated === 'true';
+    return this.branchService.findAll(merchantId, includeDeactivatedBool);
   }
 
   @Get(':id')
@@ -121,15 +131,18 @@ export class BranchController {
 
   @Delete(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a branch by ID for a merchant' })
+  @ApiOperation({
+    summary: 'Deactivate a branch by ID for a merchant (soft delete)',
+  })
   @ApiParam({
     name: 'merchantId',
     description: 'ID of the merchant',
     type: 'string',
   })
   @ApiParam({ name: 'id', description: 'Branch ID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'Branch successfully deleted.' })
+  @ApiResponse({ status: 204, description: 'Branch successfully deactivated.' })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
+  @ApiResponse({ status: 403, description: 'Branch is already deactivated.' })
   async remove(
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,

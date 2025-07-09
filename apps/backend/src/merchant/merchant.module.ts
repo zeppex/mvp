@@ -13,13 +13,16 @@ import { PosController } from './controllers/pos.controller';
 import { PaymentOrderService } from './services/payment-order.service';
 import { PaymentOrder } from './entities/payment-order.entity';
 import { PaymentOrderController } from './controllers/payment-order.controller';
+import { PublicPaymentOrderController } from './controllers/public-payment-order.controller';
 import { AuthModule } from '../auth/auth.module';
+import { QrCodeModule } from '../shared/qr-code.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Merchant, Branch, Pos, PaymentOrder]),
     BinanceClientModule,
     AuthModule,
+    QrCodeModule,
   ],
   providers: [MerchantService, BranchService, PosService, PaymentOrderService],
   controllers: [
@@ -27,6 +30,7 @@ import { AuthModule } from '../auth/auth.module';
     BranchController,
     PosController,
     PaymentOrderController,
+    PublicPaymentOrderController,
   ],
   exports: [MerchantService, BranchService, PosService, PaymentOrderService],
 })

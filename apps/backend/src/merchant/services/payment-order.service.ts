@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { PaymentOrder } from '../entities/payment-order.entity';
 import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
@@ -14,11 +16,14 @@ import { UUID } from 'src/shared/types/uuid';
 
 @Injectable()
 export class PaymentOrderService {
+  private readonly logger = new Logger(PaymentOrderService.name);
+
   constructor(
     @InjectRepository(PaymentOrder)
     private readonly orderRepository: Repository<PaymentOrder>,
     private readonly branchService: BranchService,
     private readonly posService: PosService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -39,6 +44,14 @@ export class PaymentOrderService {
     order.pos = { id: posId } as any;
     order.status = createDto.status ?? PaymentOrderStatus.ACTIVE;
 
+    // Set expiration time based on TTL configuration
+    const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
+    order.expiresAt = new Date(Date.now() + ttlMs);
+
+    this.logger.log(
+      `Creating payment order with TTL: ${ttlMs}ms, expires at: ${order.expiresAt}`,
+    );
+
     return this.orderRepository.save(order);
   }
 
@@ -46,13 +59,21 @@ export class PaymentOrderService {
     merchantId: UUID,
     branchId: UUID,
     posId: UUID,
+    includeDeactivated: boolean = false,
   ): Promise<PaymentOrder[]> {
     await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
+
+    const whereClause: any = {
+      pos: { id: posId },
+    };
+
+    if (!includeDeactivated) {
+      whereClause.deactivatedAt = null;
+    }
+
     return this.orderRepository.find({
-      where: {
-        pos: { id: posId },
-      },
+      where: whereClause,
       relations: ['pos'],
     });
   }
@@ -100,12 +121,18 @@ export class PaymentOrderService {
   ): Promise<void> {
     await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
-    const result = await this.orderRepository.delete({
-      id,
-      pos: { id: posId },
-    });
-    if (result.affected === 0)
-      throw new NotFoundException(`PaymentOrder ${id} not found`);
+
+    const order = await this.findOne(merchantId, branchId, posId, id);
+
+    if (order.deactivatedAt) {
+      throw new ForbiddenException(
+        `Payment order ${id} is already deactivated`,
+      );
+    }
+
+    // Soft delete: deactivate the payment order (sets status to CANCELLED if ACTIVE)
+    order.deactivate();
+    await this.orderRepository.save(order);
   }
 
   async getCurrent(
@@ -119,22 +146,89 @@ export class PaymentOrderService {
     const order = await this.orderRepository.findOne({
       where: {
         pos: { id: posId },
+        status: PaymentOrderStatus.ACTIVE,
       },
       order: { createdAt: 'DESC' },
       relations: ['pos'],
     });
-    if (!order || order.status !== PaymentOrderStatus.ACTIVE) {
+
+    if (!order) {
       throw new NotFoundException(`No active order for pos: ${posId}`);
     }
 
-    const now = new Date();
-    const ageMs = now.getTime() - order.createdAt.getTime();
-    if (ageMs > 2 * 60 * 1000) {
+    // Check if order has expired
+    if (order.isExpired()) {
       order.status = PaymentOrderStatus.EXPIRED;
       await this.orderRepository.save(order);
+      this.logger.log(
+        `Payment order ${order.id} expired and was marked as EXPIRED`,
+      );
       throw new NotFoundException(`No active order for pos: ${posId}`);
     }
 
     return order;
+  }
+
+  async triggerInProgress(
+    merchantId: UUID,
+    branchId: UUID,
+    posId: UUID,
+    orderId: UUID,
+  ): Promise<PaymentOrder> {
+    await this.branchService.findOne(branchId, merchantId);
+    await this.posService.findOne(merchantId, branchId, posId);
+
+    const order = await this.findOne(merchantId, branchId, posId, orderId);
+
+    // Check if order is in a valid state to be processed
+    if (order.status !== PaymentOrderStatus.ACTIVE) {
+      throw new ForbiddenException(
+        `Cannot process order with status: ${order.status}. Only ACTIVE orders can be processed.`,
+      );
+    }
+
+    // Check if order has expired
+    if (order.isExpired()) {
+      order.status = PaymentOrderStatus.EXPIRED;
+      await this.orderRepository.save(order);
+      this.logger.log(
+        `Payment order ${order.id} expired and was marked as EXPIRED`,
+      );
+      throw new ForbiddenException(
+        'Payment order has expired and cannot be processed.',
+      );
+    }
+
+    // Update status to IN_PROGRESS
+    order.status = PaymentOrderStatus.IN_PROGRESS;
+    const updatedOrder = await this.orderRepository.save(order);
+
+    this.logger.log(`Payment order ${order.id} status changed to IN_PROGRESS`);
+
+    return updatedOrder;
+  }
+
+  async cancelExpiredOrders(): Promise<number> {
+    const expiredOrders = await this.orderRepository.find({
+      where: {
+        status: PaymentOrderStatus.ACTIVE,
+      },
+    });
+
+    let cancelledCount = 0;
+    for (const order of expiredOrders) {
+      if (order.shouldBeCancelled()) {
+        order.status = PaymentOrderStatus.EXPIRED;
+        await this.orderRepository.save(order);
+        cancelledCount++;
+        this.logger.log(`Cancelled expired payment order: ${order.id}`);
+      }
+    }
+
+    if (cancelledCount > 0) {
+      this.logger.log(`Cancelled ${cancelledCount} expired payment orders`);
+    }
+
+    return cancelledCount;
   }
 }

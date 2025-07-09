@@ -20,6 +20,9 @@ export class Branch {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  originalName: string;
+
   @Column()
   address: string;
 
@@ -32,7 +35,12 @@ export class Branch {
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Merchant, (merchant) => merchant.branches)
+  @Column({ type: 'timestamp', nullable: true })
+  deactivatedAt: Date;
+
+  @ManyToOne(() => Merchant, (merchant) => merchant.branches, {
+    onDelete: 'CASCADE',
+  })
   merchant: Merchant;
 
   @OneToMany(() => Pos, (pos) => pos.branch)
@@ -47,5 +55,12 @@ export class Branch {
   @BeforeInsert()
   generateId() {
     this.id = uuidv7();
+  }
+
+  deactivate(): void {
+    this.isActive = false;
+    this.deactivatedAt = new Date();
+    this.originalName = this.name;
+    this.name = `${this.name}-DEACTIVATED`;
   }
 }

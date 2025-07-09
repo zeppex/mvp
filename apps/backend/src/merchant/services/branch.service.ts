@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Branch } from '../entities/branch.entity';
+import { PaymentOrder } from '../entities/payment-order.entity';
 import { CreateBranchDto, UpdateBranchDto } from '../dto';
 import { MerchantService } from './merchant.service';
 
@@ -14,6 +15,8 @@ export class BranchService {
   constructor(
     @InjectRepository(Branch)
     private readonly branchRepository: Repository<Branch>,
+    @InjectRepository(PaymentOrder)
+    private readonly paymentOrderRepository: Repository<PaymentOrder>,
     private readonly merchantService: MerchantService,
   ) {}
 
@@ -31,11 +34,20 @@ export class BranchService {
     return this.branchRepository.save(branch);
   }
 
-  async findAll(merchantId: string): Promise<Branch[]> {
+  async findAll(
+    merchantId: string,
+    includeDeactivated: boolean = false,
+  ): Promise<Branch[]> {
+    const whereClause: any = {
+      merchant: { id: merchantId },
+    };
+
+    if (!includeDeactivated) {
+      whereClause.isActive = true;
+    }
+
     return this.branchRepository.find({
-      where: {
-        merchant: { id: merchantId },
-      },
+      where: whereClause,
       relations: ['merchant'],
     });
   }
@@ -66,9 +78,34 @@ export class BranchService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.branchRepository.delete({ id });
-    if (result.affected === 0) {
-      throw new NotFoundException(`Branch ${id} not found`);
+    const branch = await this.findOne(id);
+
+    if (!branch.isActive) {
+      throw new ForbiddenException(`Branch ${id} is already deactivated`);
+    }
+
+    // Soft delete: deactivate the branch
+    branch.deactivate();
+    await this.branchRepository.save(branch);
+
+    // Cascade: deactivate all POS under this branch
+    if (branch.pos && branch.pos.length > 0) {
+      for (const pos of branch.pos) {
+        if (pos.isActive) {
+          pos.deactivate();
+          await this.branchRepository.manager.save(pos);
+        }
+        // Cascade: deactivate all payment orders for this POS
+        const paymentOrders = await this.paymentOrderRepository.find({
+          where: { pos: { id: pos.id }, deactivatedAt: null },
+        });
+        for (const order of paymentOrders) {
+          if (!order.deactivatedAt) {
+            order.deactivate();
+            await this.paymentOrderRepository.save(order);
+          }
+        }
+      }
     }
   }
 }
