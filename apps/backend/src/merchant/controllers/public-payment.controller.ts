@@ -64,10 +64,70 @@ export class PublicPaymentController {
     @Param('id', new ParseUUIDPipe()) orderId: UUID,
   ): Promise<any> {
     try {
-      const order = await this.orderService.triggerInProgress(
+      // Use the new service method that validates merchant ownership
+      const order = await this.orderService.triggerInProgressByMerchant(
         merchantId,
-        branchId,
-        posId,
+        orderId,
+      );
+
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+        message: 'Payment processing started successfully',
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      // For any other error, return a generic forbidden to avoid exposing internal details
+      throw new ForbiddenException(
+        'Payment order cannot be processed at this time.',
+      );
+    }
+  }
+}
+
+@ApiTags('public-payments')
+@Controller('public/pos/:posId/orders')
+export class SimplifiedPublicPaymentController {
+  constructor(private readonly orderService: PaymentOrderService) {}
+
+  @Post(':id/trigger-in-progress')
+  @HttpCode(200)
+  @UseGuards(ApiKeyGuard)
+  @ApiOperation({
+    summary:
+      'Trigger payment order in-progress status (Simplified public endpoint)',
+  })
+  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'Payment API key for customer authentication',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment order status changed to IN_PROGRESS.',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 403, description: 'Order cannot be processed.' })
+  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  @ApiResponse({ status: 401, description: 'Invalid API key.' })
+  async triggerInProgress(
+    @Param('posId', new ParseUUIDPipe()) posId: UUID,
+    @Param('id', new ParseUUIDPipe()) orderId: UUID,
+  ): Promise<any> {
+    try {
+      // Find the POS to get merchant context
+      const pos = await this.orderService['posService'].findOneByPosId(posId);
+      const merchantId = pos.branch.merchant.id;
+
+      // Use the new service method that validates merchant ownership
+      const order = await this.orderService.triggerInProgressByMerchant(
+        merchantId,
         orderId,
       );
 

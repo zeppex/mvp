@@ -13,7 +13,14 @@ import { PosController } from './controllers/pos.controller';
 import { PaymentOrderService } from './services/payment-order.service';
 import { PaymentOrder } from './entities/payment-order.entity';
 import { PaymentOrderController } from './controllers/payment-order.controller';
-import { PublicPaymentOrderController } from './controllers/public-payment-order.controller';
+import {
+  PublicPaymentOrderController,
+  SimplifiedPublicPaymentOrderController,
+} from './controllers/public-payment-order.controller';
+import {
+  PublicPaymentController,
+  SimplifiedPublicPaymentController,
+} from './controllers/public-payment.controller';
 import { AuthModule } from '../auth/auth.module';
 import { QrCodeModule } from '../shared/qr-code.module';
 
@@ -31,6 +38,9 @@ import { QrCodeModule } from '../shared/qr-code.module';
     PosController,
     PaymentOrderController,
     PublicPaymentOrderController,
+    SimplifiedPublicPaymentOrderController,
+    PublicPaymentController,
+    SimplifiedPublicPaymentController,
   ],
   exports: [MerchantService, BranchService, PosService, PaymentOrderService],
 })

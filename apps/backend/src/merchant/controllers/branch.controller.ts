@@ -33,19 +33,14 @@ import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('branches')
-@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
-@Controller('merchants/:merchantId/branches')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('branches')
 export class BranchController {
   constructor(private readonly branchService: BranchService) {}
 
   @Post()
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new branch for a merchant' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Create a new branch for the current merchant' })
   @ApiBody({ type: CreateBranchDto })
   @ApiResponse({
     status: 201,
@@ -53,20 +48,15 @@ export class BranchController {
     type: Branch,
   })
   async create(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Body() createBranchDto: CreateBranchDto,
     @Request() req,
   ): Promise<Branch> {
+    const merchantId = req.user.merchantId;
     return this.branchService.create(merchantId, createBranchDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve all branches for a merchant' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Retrieve all branches for the current merchant' })
   @ApiQuery({
     name: 'includeDeactivated',
     required: false,
@@ -79,45 +69,47 @@ export class BranchController {
     type: [Branch],
   })
   async findAll(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
     @Request() req,
     @Query('includeDeactivated') includeDeactivated?: string,
   ): Promise<Branch[]> {
+    const merchantId = req.user.merchantId;
     const includeDeactivatedBool = includeDeactivated === 'true';
     return this.branchService.findAll(merchantId, includeDeactivatedBool);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Retrieve a branch by ID for a merchant' })
+  @ApiOperation({ summary: 'Retrieve a specific branch by ID' })
   @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
+    name: 'id',
+    description: 'ID of the branch',
     type: 'string',
   })
-  @ApiParam({ name: 'id', description: 'Branch ID', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Return the branch.', type: Branch })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the branch.',
+    type: Branch,
+  })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
   async findOne(
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Branch> {
-    const branch = await this.branchService.findOne(id);
-    return branch;
+    const merchantId = req.user.merchantId;
+    return this.branchService.findOne(id, merchantId);
   }
 
   @Put(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update a branch by ID for a merchant' })
+  @ApiOperation({ summary: 'Update a branch' })
   @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
+    name: 'id',
+    description: 'ID of the branch',
     type: 'string',
   })
-  @ApiParam({ name: 'id', description: 'Branch ID', type: 'string' })
-  @ApiBody({ type: CreateBranchDto })
+  @ApiBody({ type: UpdateBranchDto })
   @ApiResponse({
     status: 200,
-    description: 'Return the updated branch.',
+    description: 'Branch successfully updated.',
     type: Branch,
   })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
@@ -126,27 +118,32 @@ export class BranchController {
     @Body() updateBranchDto: UpdateBranchDto,
     @Request() req,
   ): Promise<Branch> {
+    const merchantId = req.user.merchantId;
+    // Verify branch belongs to merchant before updating
+    await this.branchService.findOne(id, merchantId);
     return this.branchService.update(id, updateBranchDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN)
-  @ApiOperation({
-    summary: 'Deactivate a branch by ID for a merchant (soft delete)',
-  })
+  @ApiOperation({ summary: 'Deactivate a branch' })
   @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
+    name: 'id',
+    description: 'ID of the branch',
     type: 'string',
   })
-  @ApiParam({ name: 'id', description: 'Branch ID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'Branch successfully deactivated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Branch successfully deactivated.',
+  })
   @ApiResponse({ status: 404, description: 'Branch not found.' })
-  @ApiResponse({ status: 403, description: 'Branch is already deactivated.' })
   async remove(
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
+    const merchantId = req.user.merchantId;
+    // Verify branch belongs to merchant before deleting
+    await this.branchService.findOne(id, merchantId);
     return this.branchService.remove(id);
   }
 }

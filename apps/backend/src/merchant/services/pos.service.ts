@@ -99,6 +99,53 @@ export class PosService {
     return pos;
   }
 
+  async findOneByMerchant(merchantId: UUID, id: UUID): Promise<Pos> {
+    const pos = await this.posRepository.findOne({
+      where: {
+        id,
+        branch: { merchant: { id: merchantId } },
+      },
+      relations: ['branch', 'branch.merchant'],
+    });
+    if (!pos)
+      throw new NotFoundException(
+        `POS ${id} not found for merchant ${merchantId}`,
+      );
+    return pos;
+  }
+
+  async findOneByPosId(id: UUID): Promise<Pos> {
+    const pos = await this.posRepository.findOne({
+      where: { id },
+      relations: ['branch', 'branch.merchant'],
+    });
+    if (!pos) throw new NotFoundException(`POS ${id} not found`);
+    return pos;
+  }
+
+  async findAllByMerchant(
+    merchantId: UUID,
+    branchId?: UUID,
+    includeDeactivated: boolean = false,
+  ): Promise<Pos[]> {
+    const whereClause: any = {
+      branch: { merchant: { id: merchantId } },
+    };
+
+    if (branchId) {
+      whereClause.branch.id = branchId;
+    }
+
+    if (!includeDeactivated) {
+      whereClause.isActive = true;
+    }
+
+    return this.posRepository.find({
+      where: whereClause,
+      relations: ['branch'],
+    });
+  }
+
   async update(
     merchantId: UUID,
     branchId: UUID,
@@ -124,9 +171,55 @@ export class PosService {
     return this.posRepository.save(pos);
   }
 
+  async updateByMerchant(
+    merchantId: UUID,
+    id: UUID,
+    updatePosDto: UpdatePosDto,
+  ): Promise<Pos> {
+    const pos = await this.findOneByMerchant(merchantId, id);
+
+    Object.assign(pos, updatePosDto);
+
+    // Regenerate QR code if it doesn't exist or if POS details changed
+    if (!pos.qrCode || updatePosDto.name || updatePosDto.description) {
+      const qrCode = this.qrCodeService.generatePosQrCode(
+        merchantId,
+        pos.branch.id,
+        pos.id,
+      );
+      pos.qrCode = qrCode.url;
+      this.logger.log(`Updated QR code for POS ${pos.id}: ${pos.qrCode}`);
+    }
+
+    return this.posRepository.save(pos);
+  }
+
   async remove(merchantId: UUID, branchId: UUID, id: UUID): Promise<void> {
     await this.branchService.findOne(branchId, merchantId);
     const pos = await this.findOne(merchantId, branchId, id);
+
+    if (!pos.isActive) {
+      throw new ForbiddenException(`POS ${id} is already deactivated`);
+    }
+
+    // Soft delete: deactivate the POS
+    pos.deactivate();
+    await this.posRepository.save(pos);
+
+    // Cascade: deactivate all payment orders for this POS
+    const paymentOrders = await this.paymentOrderRepository.find({
+      where: { pos: { id: pos.id }, deactivatedAt: null },
+    });
+    for (const order of paymentOrders) {
+      if (!order.deactivatedAt) {
+        order.deactivate();
+        await this.paymentOrderRepository.save(order);
+      }
+    }
+  }
+
+  async removeByMerchant(merchantId: UUID, id: UUID): Promise<void> {
+    const pos = await this.findOneByMerchant(merchantId, id);
 
     if (!pos.isActive) {
       throw new ForbiddenException(`POS ${id} is already deactivated`);

@@ -86,7 +86,7 @@ describe('Validation E2E Tests', () => {
 
     // Create test branch
     const branchResponse = await request(app.getHttpServer())
-      .post(`/api/v1/merchants/${merchantId}/branches`)
+      .post(`/api/v1/branches`)
       .set('Authorization', `Bearer ${superadminToken}`)
       .send({
         name: 'Validation Test Branch',
@@ -99,11 +99,12 @@ describe('Validation E2E Tests', () => {
 
     // Create test POS
     const posResponse = await request(app.getHttpServer())
-      .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+      .post(`/api/v1/pos`)
       .set('Authorization', `Bearer ${superadminToken}`)
       .send({
         name: 'Validation Test POS',
         description: 'POS for validation testing',
+        branchId: branchId,
       });
 
     posId = posResponse.body.id;
@@ -213,7 +214,7 @@ describe('Validation E2E Tests', () => {
   describe('Branch Validation', () => {
     it('should reject branch with invalid phone number', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Invalid Phone Branch ${testSuffix}`,
@@ -226,7 +227,7 @@ describe('Validation E2E Tests', () => {
 
     it('should reject branch with name too short', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'A',
@@ -239,7 +240,7 @@ describe('Validation E2E Tests', () => {
 
     it('should reject branch with name too long', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'A'.repeat(101),
@@ -252,7 +253,7 @@ describe('Validation E2E Tests', () => {
 
     it('should reject branch with missing required fields', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Test Branch ${testSuffix}`,
@@ -263,7 +264,7 @@ describe('Validation E2E Tests', () => {
 
     it('should accept valid branch data', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Valid Test Branch ${testSuffix}`,
@@ -278,44 +279,47 @@ describe('Validation E2E Tests', () => {
   describe('POS Validation', () => {
     it('should reject POS with name too long', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'A'.repeat(101),
           description: `Test description ${testSuffix}`,
+          branchId: branchId,
         })
         .expect(400);
     });
 
     it('should reject POS with description too long', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Test POS ${testSuffix}`,
           description: 'A'.repeat(501),
+          branchId: branchId,
         })
         .expect(400);
     });
 
     it('should reject POS with missing required fields', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Test POS ${testSuffix}`,
-          // Missing description
+          // Missing description and branchId
         })
         .expect(400);
     });
 
     it('should accept valid POS data', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Valid Test POS ${testSuffix}`,
           description: `Valid POS description ${testSuffix}`,
+          branchId: branchId,
         })
         .expect(201);
     });
@@ -324,51 +328,47 @@ describe('Validation E2E Tests', () => {
   describe('Payment Order Validation', () => {
     it('should reject payment order with invalid amount format', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: 'invalid-amount',
           description: 'Test order',
+          posId: posId,
         })
         .expect(400);
     });
 
     it('should reject payment order with amount too many decimal places', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '10.123',
           description: 'Test order',
+          posId: posId,
         })
         .expect(400);
     });
 
     it('should reject payment order with description too long', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '10.00',
           description: 'A'.repeat(501),
+          posId: posId,
         })
         .expect(400);
     });
 
     it('should reject payment order with missing required fields', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '10.00',
+          posId: posId,
           // Missing description
         })
         .expect(400);
@@ -376,13 +376,12 @@ describe('Validation E2E Tests', () => {
 
     it('should accept valid payment order data', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '10.50',
           description: 'Valid test order',
+          posId: posId,
         })
         .expect(201);
     });
@@ -523,7 +522,7 @@ describe('Validation E2E Tests', () => {
       testMerchantId = merchantResponse.body.id;
 
       const branchResponse = await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${testMerchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Update Test Branch ${testSuffix}`,
@@ -535,9 +534,7 @@ describe('Validation E2E Tests', () => {
       testBranchId = branchResponse.body.id;
 
       const posResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos`,
-        )
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: `Update Test POS ${testSuffix}`,
@@ -569,7 +566,7 @@ describe('Validation E2E Tests', () => {
 
     it('should accept partial branch update with valid data', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/merchants/${testMerchantId}/branches/${testBranchId}`)
+        .put(`/api/v1/branches/${testBranchId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'Updated Branch Name',
@@ -579,7 +576,7 @@ describe('Validation E2E Tests', () => {
 
     it('should reject branch update with invalid phone', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/merchants/${testMerchantId}/branches/${testBranchId}`)
+        .put(`/api/v1/branches/${testBranchId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           contactPhone: 'invalid-phone',
@@ -589,9 +586,7 @@ describe('Validation E2E Tests', () => {
 
     it('should accept partial POS update with valid data', async () => {
       await request(app.getHttpServer())
-        .put(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}`,
-        )
+        .put(`/api/v1/pos/${testPosId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'Updated POS Name',
@@ -602,21 +597,18 @@ describe('Validation E2E Tests', () => {
     it('should accept partial payment order update with valid data', async () => {
       // Create a fresh payment order right before the test to avoid TTL issues
       const orderResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '20.00',
           description: `Update test order ${testSuffix}`,
+          posId: testPosId,
         });
 
       const orderId = orderResponse.body.id;
 
       await request(app.getHttpServer())
-        .put(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${orderId}`,
-        )
+        .put(`/api/v1/orders/${orderId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '25.50',
@@ -627,21 +619,18 @@ describe('Validation E2E Tests', () => {
     it('should reject payment order update with invalid amount', async () => {
       // Create a fresh payment order right before the test to avoid TTL issues
       const orderResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: '20.00',
           description: `Update test order ${testSuffix}`,
+          posId: testPosId,
         });
 
       const orderId = orderResponse.body.id;
 
       await request(app.getHttpServer())
-        .put(
-          `/api/v1/merchants/${testMerchantId}/branches/${testBranchId}/pos/${testPosId}/orders/${orderId}`,
-        )
+        .put(`/api/v1/orders/${orderId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           amount: 'invalid-amount',

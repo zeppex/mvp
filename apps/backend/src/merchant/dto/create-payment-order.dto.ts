@@ -6,6 +6,7 @@ import {
   IsOptional,
   Length,
   Matches,
+  IsUUID,
 } from 'class-validator';
 import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
@@ -35,6 +36,14 @@ export class CreatePaymentOrderDto {
     message: 'Description must be between 1 and 500 characters',
   })
   description: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'ID of the POS terminal',
+  })
+  @IsUUID('4', { message: 'POS ID must be a valid UUID' })
+  @IsNotEmpty({ message: 'POS ID is required' })
+  posId: string;
 
   @ApiProperty({
     example: PaymentOrderStatus.PENDING,

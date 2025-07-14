@@ -9,12 +9,9 @@ import {
   ParseUUIDPipe,
   UseGuards,
   Request,
-  ForbiddenException,
-  HttpCode,
-  ValidationPipe,
   BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
 import { PaymentOrderService } from '../services/payment-order.service';
 import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { PaymentOrder } from '../entities/payment-order.entity';
@@ -32,11 +29,13 @@ import { MerchantGuard } from '../../auth/guards/merchant.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
+import { ValidationPipe } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 
 @ApiBearerAuth('access-token')
 @ApiTags('payment-orders')
-@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
-@Controller('merchants/:merchantId/branches/:branchId/pos/:posId/orders')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('orders')
 export class PaymentOrderController {
   constructor(private readonly orderService: PaymentOrderService) {}
 
@@ -48,17 +47,6 @@ export class PaymentOrderController {
     UserRole.CASHIER,
   )
   @ApiOperation({ summary: 'Create a new payment order' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
   @ApiBody({ type: CreatePaymentOrderDto })
   @ApiResponse({
     status: 201,
@@ -66,17 +54,20 @@ export class PaymentOrderController {
     type: PaymentOrder,
   })
   async create(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     dto: CreatePaymentOrderDto,
     @Request() req,
   ): Promise<any> {
     try {
-      const order = await this.orderService.create(
+      const merchantId = req.user.merchantId;
+      const posId = dto.posId;
+
+      if (!posId) {
+        throw new BadRequestException('POS ID is required');
+      }
+
+      const order = await this.orderService.createByMerchant(
         merchantId,
-        branchId,
         posId,
         dto,
       );
@@ -93,30 +84,17 @@ export class PaymentOrderController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve all payment orders for a POS' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
+  @ApiOperation({
+    summary: 'Retrieve all payment orders for the current merchant',
   })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
   @ApiResponse({
     status: 200,
     description: 'List of payment orders.',
     type: [PaymentOrder],
   })
-  async findAll(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
-    @Request() req,
-  ): Promise<any[]> {
-    const orders = await this.orderService.findAll(merchantId, branchId, posId);
+  async findAll(@Request() req): Promise<any[]> {
+    const merchantId = req.user.merchantId;
+    const orders = await this.orderService.findAllByMerchant(merchantId);
     return orders.map((order) => ({
       ...order,
       amount: Number(order.amount).toFixed(2),
@@ -124,38 +102,20 @@ export class PaymentOrderController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Retrieve a payment order by ID' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiOperation({ summary: 'Retrieve a specific payment order by ID' })
   @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
   @ApiResponse({
     status: 200,
-    description: 'Return the payment order.',
+    description: 'Payment order details.',
     type: PaymentOrder,
   })
   @ApiResponse({ status: 404, description: 'Payment order not found.' })
   async findOne(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<any> {
-    const order = await this.orderService.findOne(
-      merchantId,
-      branchId,
-      posId,
-      id,
-    );
+    const merchantId = req.user.merchantId;
+    const order = await this.orderService.findOneByMerchant(merchantId, id);
     return {
       ...order,
       amount: Number(order.amount).toFixed(2),
@@ -169,80 +129,51 @@ export class PaymentOrderController {
     UserRole.BRANCH_ADMIN,
     UserRole.CASHIER,
   )
-  @ApiOperation({ summary: 'Update a payment order by ID' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiOperation({ summary: 'Update a payment order' })
   @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
   @ApiBody({ type: UpdatePaymentOrderDto })
   @ApiResponse({
     status: 200,
-    description: 'Payment order successfully updated.',
+    description: 'Payment order updated.',
     type: PaymentOrder,
   })
   @ApiResponse({ status: 404, description: 'Payment order not found.' })
   async update(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
-    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    updatePaymentOrderDto: UpdatePaymentOrderDto,
+    @Body() updateOrderDto: UpdatePaymentOrderDto,
     @Request() req,
   ): Promise<any> {
-    try {
-      const order = await this.orderService.update(
-        merchantId,
-        branchId,
-        posId,
-        id,
-        updatePaymentOrderDto,
-      );
-      return {
-        ...order,
-        amount: Number(order.amount).toFixed(2),
-      };
-    } catch (error) {
-      if (error instanceof QueryFailedError) {
-        throw new BadRequestException('Invalid input: ' + error.message);
-      }
-      throw error;
-    }
+    const merchantId = req.user.merchantId;
+    // Verify order belongs to merchant before updating
+    await this.orderService.findOneByMerchant(merchantId, id);
+    const order = await this.orderService.updateByMerchant(
+      merchantId,
+      id,
+      updateOrderDto,
+    );
+    return {
+      ...order,
+      amount: Number(order.amount).toFixed(2),
+    };
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
-  @ApiOperation({ summary: 'Delete a payment order by ID' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiOperation({ summary: 'Cancel a payment order' })
   @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'Payment order deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment order cancelled.',
+  })
   @ApiResponse({ status: 404, description: 'Payment order not found.' })
   async remove(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    await this.orderService.remove(merchantId, branchId, posId, id);
+    const merchantId = req.user.merchantId;
+    // Verify order belongs to merchant before deleting
+    await this.orderService.findOneByMerchant(merchantId, id);
+    return this.orderService.removeByMerchant(merchantId, id);
   }
 
   @Post(':id/trigger-in-progress')
@@ -251,17 +182,6 @@ export class PaymentOrderController {
     summary:
       'Trigger payment order to IN_PROGRESS status (for payment processing)',
   })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
   @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
   @ApiResponse({
     status: 200,
@@ -274,15 +194,14 @@ export class PaymentOrderController {
     description: 'Payment order cannot be processed (expired or wrong status).',
   })
   async triggerInProgress(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('posId', new ParseUUIDPipe()) posId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Request() req,
   ): Promise<any> {
-    const order = await this.orderService.triggerInProgress(
+    const merchantId = req.user.merchantId;
+    // Verify order belongs to merchant before triggering
+    await this.orderService.findOneByMerchant(merchantId, id);
+    const order = await this.orderService.triggerInProgressByMerchant(
       merchantId,
-      branchId,
-      posId,
       id,
     );
     return {

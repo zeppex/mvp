@@ -36,8 +36,8 @@ import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('pos')
-@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
-@Controller('merchants/:merchantId/branches/:branchId/pos')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('pos')
 export class PosController {
   private readonly logger = new Logger(PosController.name);
   constructor(
@@ -48,16 +48,6 @@ export class PosController {
   @Post()
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
   @ApiOperation({ summary: 'Create a new POS for a branch' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
   @ApiBody({ type: CreatePosDto })
   @ApiResponse({
     status: 201,
@@ -65,26 +55,17 @@ export class PosController {
     type: Pos,
   })
   async create(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Body() createPosDto: CreatePosDto,
     @Request() req,
   ): Promise<Pos> {
+    const merchantId = req.user.merchantId;
+    const branchId = createPosDto.branchId;
+
     return this.posService.create(merchantId, branchId, createPosDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve all POS for a branch' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Retrieve all POS for the current merchant' })
   @ApiQuery({
     name: 'includeDeactivated',
     required: false,
@@ -93,60 +74,44 @@ export class PosController {
   })
   @ApiResponse({ status: 200, description: 'Return all POS.', type: [Pos] })
   async findAll(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Request() req,
     @Query('includeDeactivated') includeDeactivated?: string,
   ): Promise<Pos[]> {
+    const merchantId = req.user.merchantId;
+    const branchId = req.user.branchId; // This might be undefined for admin users
+
     this.logger.log(
       `Fetching POS for merchant ${merchantId}, branch ${branchId}`,
     );
 
     const includeDeactivatedBool = includeDeactivated === 'true';
-    return this.posService.findAll(
+    return this.posService.findAllByMerchant(
       merchantId,
-      branchId,
+      branchId, // Pass undefined to get all POS for the merchant
       includeDeactivatedBool,
     );
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Retrieve a POS by ID for a branch' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Retrieve a specific POS by ID' })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Return the POS.', type: Pos })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the POS.',
+    type: Pos,
+  })
   @ApiResponse({ status: 404, description: 'POS not found.' })
   async findOne(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Pos> {
-    return this.posService.findOne(merchantId, branchId, id);
+    const merchantId = req.user.merchantId;
+    return this.posService.findOneByMerchant(merchantId, id);
   }
 
   @Put(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
-  @ApiOperation({ summary: 'Update a POS by ID for a branch' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Update a POS' })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
   @ApiBody({ type: UpdatePosDto })
   @ApiResponse({
@@ -156,55 +121,37 @@ export class PosController {
   })
   @ApiResponse({ status: 404, description: 'POS not found.' })
   async update(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Body() updatePosDto: UpdatePosDto,
     @Request() req,
   ): Promise<Pos> {
-    return this.posService.update(merchantId, branchId, id, updatePosDto);
+    const merchantId = req.user.merchantId;
+    // Verify POS belongs to merchant before updating
+    await this.posService.findOneByMerchant(merchantId, id);
+    return this.posService.updateByMerchant(merchantId, id, updatePosDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
-  @ApiOperation({
-    summary: 'Deactivate a POS by ID for a branch (soft delete)',
-  })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
+  @ApiOperation({ summary: 'Deactivate a POS' })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'POS successfully deactivated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'POS successfully deactivated.',
+  })
   @ApiResponse({ status: 404, description: 'POS not found.' })
-  @ApiResponse({ status: 403, description: 'POS is already deactivated.' })
   async remove(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    return this.posService.remove(merchantId, branchId, id);
+    const merchantId = req.user.merchantId;
+    // Verify POS belongs to merchant before deleting
+    await this.posService.findOneByMerchant(merchantId, id);
+    return this.posService.removeByMerchant(merchantId, id);
   }
 
   @Get(':id/paymentorder')
   @ApiOperation({ summary: 'Get current payment order for a POS' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
   @ApiResponse({
     status: 200,
@@ -213,47 +160,12 @@ export class PosController {
   })
   @ApiResponse({ status: 404, description: 'No active order for pos' })
   async getCurrentPaymentOrder(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
     @Param('id', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
   ): Promise<PaymentOrder> {
-    return this.paymentOrderService.getCurrent(merchantId, branchId, posId);
-  }
-
-  @Get(':id/qr-code')
-  @ApiOperation({ summary: 'Get QR code information for a POS' })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
-  @ApiResponse({
-    status: 200,
-    description: 'QR code information for the POS',
-    schema: {
-      type: 'object',
-      properties: {
-        posId: { type: 'string' },
-        posName: { type: 'string' },
-        qrCodeUrl: { type: 'string' },
-        qrCodeImageUrl: { type: 'string' },
-      },
-    },
-  })
-  @ApiResponse({ status: 404, description: 'POS not found.' })
-  async getQrCode(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
-    @Param('id', new ParseUUIDPipe()) posId: UUID,
-    @Request() req,
-  ): Promise<any> {
-    return this.posService.getQrCode(merchantId, branchId, posId);
+    const merchantId = req.user.merchantId;
+    // Verify POS belongs to merchant before getting payment order
+    await this.posService.findOneByMerchant(merchantId, posId);
+    return this.paymentOrderService.getCurrentByMerchant(merchantId, posId);
   }
 }

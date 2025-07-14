@@ -109,7 +109,7 @@ describe('Payment Flow TTL Tests', () => {
     merchantAdminToken = adminLoginResponse.body.accessToken;
 
     const branchResponse = await request(app.getHttpServer())
-      .post(`/api/v1/merchants/${merchantId}/branches`)
+      .post(`/api/v1/branches`)
       .set('Authorization', `Bearer ${merchantAdminToken}`)
       .send({
         name: `TTL Test Branch ${testSuffix}`,
@@ -121,11 +121,12 @@ describe('Payment Flow TTL Tests', () => {
     branchId = branchResponse.body.id;
 
     const posResponse = await request(app.getHttpServer())
-      .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+      .post(`/api/v1/pos`)
       .set('Authorization', `Bearer ${merchantAdminToken}`)
       .send({
         name: `TTL Test POS ${testSuffix}`,
         description: 'POS for TTL testing',
+        branchId: branchId,
       });
 
     posId = posResponse.body.id;
@@ -162,13 +163,12 @@ describe('Payment Flow TTL Tests', () => {
   describe('TTL Expiration Tests', () => {
     it('should create payment order with correct TTL', async () => {
       const response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '25.00',
           description: 'TTL test order',
+          posId: posId,
         })
         .expect(201);
 
@@ -187,13 +187,12 @@ describe('Payment Flow TTL Tests', () => {
     it('should expire payment order after TTL', async () => {
       // Create a payment order
       const createResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '50.00',
           description: 'Order to expire',
+          posId: posId,
         });
 
       const orderId = createResponse.body.id;
@@ -225,13 +224,12 @@ describe('Payment Flow TTL Tests', () => {
     it('should not allow processing expired orders', async () => {
       // Create and immediately expire an order
       const createResponse = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '75.00',
           description: 'Order to expire immediately',
+          posId: posId,
         });
 
       const orderId = createResponse.body.id;
@@ -257,26 +255,24 @@ describe('Payment Flow TTL Tests', () => {
     it('should handle multiple orders and show only the latest active one', async () => {
       // Create first order
       const order1Response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '100.00',
           description: 'First order',
+          posId: posId,
         });
 
       const order1Id = order1Response.body.id;
 
       // Create second order (should replace first one)
       const order2Response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '200.00',
           description: 'Second order',
+          posId: posId,
         });
 
       const order2Id = order2Response.body.id;
@@ -307,13 +303,12 @@ describe('Payment Flow TTL Tests', () => {
       // Create multiple orders rapidly
       const promises = Array.from({ length: 3 }, (_, i) =>
         request(app.getHttpServer())
-          .post(
-            `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-          )
+          .post(`/api/v1/orders`)
           .set('Authorization', `Bearer ${merchantAdminToken}`)
           .send({
             amount: `${(i + 1) * 10}.00`,
             description: `Concurrent order ${i + 1}`,
+            posId: posId,
           }),
       );
 
@@ -345,13 +340,12 @@ describe('Payment Flow TTL Tests', () => {
 
       // Temporarily update the TTL by creating a new order with manual expiration
       const response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '150.00',
           description: 'Long TTL test order',
+          posId: posId,
         });
 
       const orderId = response.body.id;

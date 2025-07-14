@@ -23,7 +23,22 @@ export class QrCodeService {
       'FRONTEND_URL',
       'http://localhost:3000',
     );
-    const qrCodeUrl = `${baseUrl}/payment/${merchantId}/${branchId}/${posId}`;
+
+    // Check if we should use the new simplified format
+    const useSimplifiedFormat = this.configService.get<boolean>(
+      'USE_SIMPLIFIED_QR_URLS',
+      false,
+    );
+
+    let qrCodeUrl: string;
+
+    if (useSimplifiedFormat) {
+      // New simplified format: /payment/{posId}
+      qrCodeUrl = `${baseUrl}/payment/${posId}`;
+    } else {
+      // Legacy format: /payment/{merchantId}/{branchId}/{posId}
+      qrCodeUrl = `${baseUrl}/payment/${merchantId}/${branchId}/${posId}`;
+    }
 
     this.logger.log(`Generated QR code URL for POS ${posId}: ${qrCodeUrl}`);
 
@@ -54,6 +69,38 @@ export class QrCodeService {
    */
   generatePosQrCode(merchantId: string, branchId: string, posId: string) {
     const qrCodeUrl = this.generatePosQrCodeUrl(merchantId, branchId, posId);
+    const qrCodeImageUrl = this.generateQrCodeImage(qrCodeUrl);
+
+    return {
+      url: qrCodeUrl,
+      imageUrl: qrCodeImageUrl,
+    };
+  }
+
+  /**
+   * Generate a simplified QR code URL (POS ID only)
+   * @param posId - The POS ID
+   * @returns Simplified QR code URL
+   */
+  generateSimplifiedPosQrCodeUrl(posId: string): string {
+    const baseUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+    const qrCodeUrl = `${baseUrl}/payment/${posId}`;
+
+    this.logger.log(`Generated simplified QR code URL for POS ${posId}: ${qrCodeUrl}`);
+
+    return qrCodeUrl;
+  }
+
+  /**
+   * Generate a simplified QR code for a POS
+   * @param posId - The POS ID
+   * @returns Object containing both the URL and image URL
+   */
+  generateSimplifiedPosQrCode(posId: string) {
+    const qrCodeUrl = this.generateSimplifiedPosQrCodeUrl(posId);
     const qrCodeImageUrl = this.generateQrCodeImage(qrCodeUrl);
 
     return {

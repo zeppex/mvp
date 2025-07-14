@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, Length } from 'class-validator';
+import { IsString, IsNotEmpty, Length, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePosDto {
@@ -27,4 +27,12 @@ export class CreatePosDto {
     message: 'POS description must be between 1 and 500 characters',
   })
   description: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'ID of the branch this POS belongs to',
+  })
+  @IsUUID('4', { message: 'Branch ID must be a valid UUID' })
+  @IsNotEmpty({ message: 'Branch ID is required' })
+  branchId: string;
 }

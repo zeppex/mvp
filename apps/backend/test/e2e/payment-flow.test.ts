@@ -160,7 +160,7 @@ describe('Payment Flow E2E Tests', () => {
 
     it('should create a test branch', async () => {
       const response = await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches`)
+        .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           name: `Test Payment Branch ${testSuffix}`,
@@ -178,11 +178,12 @@ describe('Payment Flow E2E Tests', () => {
 
     it('should create a test POS with QR code', async () => {
       const response = await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           name: `Test Payment POS ${testSuffix}`,
           description: 'Test Point of Sale for Payment Flow',
+          branchId: branchId,
         })
         .expect(201);
 
@@ -239,13 +240,12 @@ describe('Payment Flow E2E Tests', () => {
   describe('Payment Order Creation and TTL', () => {
     it('should create a payment order with TTL', async () => {
       const response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '99.99',
           description: 'Test payment order for E2E testing',
+          posId: posId,
         })
         .expect(201);
 
@@ -274,9 +274,7 @@ describe('Payment Flow E2E Tests', () => {
 
     it('should list payment orders for POS', async () => {
       const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .get(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .expect(200);
 
@@ -313,11 +311,12 @@ describe('Payment Flow E2E Tests', () => {
     it('should return 404 when no active order exists', async () => {
       // Create a new POS without any orders
       const newPosResponse = await request(app.getHttpServer())
-        .post(`/api/v1/merchants/${merchantId}/branches/${branchId}/pos`)
+        .post(`/api/v1/pos`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           name: 'Empty POS',
           description: 'POS with no orders',
+          branchId: branchId,
         })
         .expect(201);
 
@@ -369,13 +368,12 @@ describe('Payment Flow E2E Tests', () => {
   describe('Payment Order Expiration', () => {
     it('should create a new payment order for expiration testing', async () => {
       const response = await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: '50.00',
           description: 'Order for expiration testing',
+          posId: posId,
         })
         .expect(201);
 
@@ -483,22 +481,19 @@ describe('Payment Flow E2E Tests', () => {
   describe('Data Validation', () => {
     it('should validate payment order amount format', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           amount: 'invalid-amount',
           description: 'Test with invalid amount',
+          posId: posId,
         })
         .expect(400);
     });
 
     it('should validate required fields', async () => {
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders`,
-        )
+        .post(`/api/v1/orders`)
         .set('Authorization', `Bearer ${merchantAdminToken}`)
         .send({
           // Missing required fields
