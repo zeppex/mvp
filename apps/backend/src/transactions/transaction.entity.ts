@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { Merchant } from '../merchant/entities/merchant.entity';
 import { Branch } from '../merchant/entities/branch.entity';
 import { Pos } from '../merchant/entities/pos.entity';
@@ -116,7 +116,7 @@ export class Transaction {
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = uuidv7();
+      this.id = uuidv4();
     }
   }
 }

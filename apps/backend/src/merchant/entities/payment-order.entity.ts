@@ -8,7 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { Branch } from './branch.entity';
 import { Pos } from './pos.entity';
 import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
@@ -54,7 +54,7 @@ export class PaymentOrder {
 
   @BeforeInsert()
   generateId() {
-    this.id = uuidv7();
+    this.id = uuidv4();
   }
 
   isExpired(): boolean {

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsUUID, IsEnum, Length, Matches } from 'class-validator';
-import { UUID } from 'crypto';
 import { TransactionStatus } from '../../shared/enums/transactions.enum';
 import { Exchange } from '../../shared/enums/exchange.enum';
 
@@ -20,21 +19,21 @@ export class CreateTransactionDto {
     description: 'ID of the merchant',
   })
   @IsUUID('4', { message: 'Merchant ID must be a valid UUID' })
-  merchantId: UUID;
+  merchantId: string;
 
   @ApiProperty({
     example: '019730ab-7b64-7218-aad6-773cdcbb719f',
     description: 'ID of the branch',
   })
   @IsUUID('4', { message: 'Branch ID must be a valid UUID' })
-  branchId: UUID;
+  branchId: string;
 
   @ApiProperty({
     example: '019730ab-7b64-7218-aad6-773cdcbb719f',
     description: 'ID of the POS',
   })
   @IsUUID('4', { message: 'POS ID must be a valid UUID' })
-  posId: UUID;
+  posId: string;
 
   @ApiProperty({
     example: '10.00',
