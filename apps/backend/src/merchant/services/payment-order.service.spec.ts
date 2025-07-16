@@ -83,6 +83,7 @@ describe('PaymentOrderService', () => {
     const createDto = {
       amount: '100.00',
       description: 'Test order',
+      posId: posId,
     };
 
     it('should create ACTIVE order when no active order exists', async () => {
@@ -137,6 +138,7 @@ describe('PaymentOrderService', () => {
     const createDto = {
       amount: '100.00',
       description: 'Test order',
+      posId: posId,
     };
 
     it('should create ACTIVE order when no active order exists', async () => {
@@ -200,7 +202,7 @@ describe('PaymentOrderService', () => {
         id: 'active-order',
         status: PaymentOrderStatus.ACTIVE,
         expiresAt: new Date(Date.now() + 60000), // Not expired
-        isExpired: () => false,
+        isExpired: jest.fn().mockReturnValue(false),
       };
 
       mockPosService.findOneByMerchant.mockResolvedValue({ id: posId });
@@ -216,19 +218,21 @@ describe('PaymentOrderService', () => {
         id: 'expired-order',
         status: PaymentOrderStatus.ACTIVE,
         expiresAt: new Date(Date.now() - 60000), // Expired
-        isExpired: () => true,
+        isExpired: jest.fn().mockReturnValue(true),
       };
 
       const queuedOrder = {
         id: 'queued-order',
         status: PaymentOrderStatus.QUEUED,
         expiresAt: null,
+        isExpired: jest.fn().mockReturnValue(false),
       };
 
       const promotedOrder = {
         id: 'queued-order',
         status: PaymentOrderStatus.ACTIVE,
         expiresAt: new Date(Date.now() + 120000), // New TTL
+        isExpired: jest.fn().mockReturnValue(false),
       };
 
       mockPosService.findOneByMerchant.mockResolvedValue({ id: posId });
@@ -240,11 +244,19 @@ describe('PaymentOrderService', () => {
       const result = await service.getCurrentByMerchant(merchantId, posId);
 
       expect(result).toBe(promotedOrder);
-      expect(mockPaymentOrderRepository.save).toHaveBeenCalledWith(
+      expect(mockPaymentOrderRepository.save).toHaveBeenCalledTimes(2);
+      // First call should be to save the expired order
+      expect(mockPaymentOrderRepository.save).toHaveBeenNthCalledWith(
+        1,
         expiredOrder,
       );
-      expect(mockPaymentOrderRepository.save).toHaveBeenCalledWith(
-        promotedOrder,
+      // Second call should be to save the promoted order
+      expect(mockPaymentOrderRepository.save).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          id: 'queued-order',
+          status: PaymentOrderStatus.ACTIVE,
+        }),
       );
     });
 
@@ -253,12 +265,14 @@ describe('PaymentOrderService', () => {
         id: 'queued-order',
         status: PaymentOrderStatus.QUEUED,
         expiresAt: null,
+        isExpired: jest.fn().mockReturnValue(false),
       };
 
       const promotedOrder = {
         id: 'queued-order',
         status: PaymentOrderStatus.ACTIVE,
         expiresAt: new Date(Date.now() + 120000), // New TTL
+        isExpired: jest.fn().mockReturnValue(false),
       };
 
       mockPosService.findOneByMerchant.mockResolvedValue({ id: posId });
@@ -271,7 +285,10 @@ describe('PaymentOrderService', () => {
 
       expect(result).toBe(promotedOrder);
       expect(mockPaymentOrderRepository.save).toHaveBeenCalledWith(
-        promotedOrder,
+        expect.objectContaining({
+          id: 'queued-order',
+          status: PaymentOrderStatus.ACTIVE,
+        }),
       );
     });
 
@@ -292,7 +309,7 @@ describe('PaymentOrderService', () => {
       const expiredOrder = {
         id: 'expired-order',
         status: PaymentOrderStatus.ACTIVE,
-        shouldBeCancelled: () => true,
+        shouldBeCancelled: jest.fn().mockReturnValue(true),
       };
 
       mockPaymentOrderRepository.find.mockResolvedValue([expiredOrder]);
@@ -311,7 +328,7 @@ describe('PaymentOrderService', () => {
       const activeOrder = {
         id: 'active-order',
         status: PaymentOrderStatus.ACTIVE,
-        shouldBeCancelled: () => false,
+        shouldBeCancelled: jest.fn().mockReturnValue(false),
       };
 
       mockPaymentOrderRepository.find.mockResolvedValue([activeOrder]);

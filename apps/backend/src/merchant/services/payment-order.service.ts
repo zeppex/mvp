@@ -296,6 +296,7 @@ export class PaymentOrderService {
       order: { createdAt: 'DESC' },
       relations: ['pos'],
     });
+    
     if (order && order.isExpired()) {
       order.status = PaymentOrderStatus.EXPIRED;
       await this.orderRepository.save(order);
@@ -311,6 +312,7 @@ export class PaymentOrderService {
         throw new NotFoundException(`No active order for pos: ${posId}`);
       }
     }
+    
     if (!order) {
       // No active order, try to promote next queued order
       const next = await this.getNextQueuedOrder(posId);
@@ -321,6 +323,17 @@ export class PaymentOrderService {
         throw new NotFoundException(`No active order for pos: ${posId}`);
       }
     }
+    
+    // Final check: if the order is still expired (shouldn't happen but just in case)
+    if (order && order.isExpired()) {
+      order.status = PaymentOrderStatus.EXPIRED;
+      await this.orderRepository.save(order);
+      this.logger.log(
+        `Payment order ${order.id} expired and was marked as EXPIRED`,
+      );
+      throw new NotFoundException(`No active order for pos: ${posId}`);
+    }
+    
     return order;
   }
 
@@ -419,5 +432,16 @@ export class PaymentOrderService {
     }
 
     return cancelledCount;
+  }
+
+  async updateOrderStatus(
+    merchantId: UUID,
+    orderId: UUID,
+    status: PaymentOrderStatus,
+  ): Promise<PaymentOrder> {
+    const order = await this.findOneByMerchant(merchantId, orderId);
+    order.status = status;
+    await this.orderRepository.save(order);
+    return order;
   }
 }

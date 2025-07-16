@@ -12,11 +12,11 @@ export const createTestingModule = async () => {
         load: [
           () => ({
             // Override TTL for faster testing
-            PAYMENT_ORDER_TTL: 30000, // 30 seconds for testing
+            PAYMENT_ORDER_TTL: 10000, // 10 seconds for testing
             NODE_ENV: 'test',
             DB_HOST: process.env.DB_HOST || 'localhost',
             DB_PORT: parseInt(process.env.DB_PORT || '5432'),
-            DB_USER: process.env.DB_USER || 'postgres',
+            DB_USER: process.env.DB_USER || 'user',
             DB_PASS: process.env.DB_PASS || 'password',
             DB_NAME: process.env.DB_NAME || 'zeppex_test',
             JWT_SECRET:
@@ -30,13 +30,12 @@ export const createTestingModule = async () => {
         type: 'postgres',
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432'),
-        username: process.env.DB_USER || 'postgres',
+        username: process.env.DB_USER || 'user',
         password: process.env.DB_PASS || 'password',
         database: process.env.DB_NAME || 'zeppex_test',
         autoLoadEntities: true,
         synchronize: true, // Be careful with this in production
         logging: false,
-        dropSchema: true, // Clean database for each test run
       }),
       AppModule,
     ],
@@ -45,7 +44,7 @@ export const createTestingModule = async () => {
 
 export const testConfig = {
   // Test-specific configuration
-  paymentOrderTTL: 30000, // 30 seconds
+  paymentOrderTTL: 10000, // 10 seconds
   testTimeout: 60000, // 60 seconds
   cleanupDelay: 1000, // 1 second delay for cleanup operations
 

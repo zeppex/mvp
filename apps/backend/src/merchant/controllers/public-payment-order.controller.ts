@@ -5,12 +5,23 @@ import {
   ParseUUIDPipe,
   NotFoundException,
   Logger,
+  Post,
+  Headers,
+  ForbiddenException,
+  HttpCode,
 } from '@nestjs/common';
 import { PaymentOrderService } from '../services/payment-order.service';
 import { PosService } from '../services/pos.service';
 import { PaymentOrder } from '../entities/payment-order.entity';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { UUID } from 'crypto';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
 @ApiTags('public-payment-order')
 @Controller('public/payment-order')
@@ -123,6 +134,169 @@ export class SimplifiedPublicPaymentOrderController {
       }
       // For any other error, return a generic not found to avoid exposing internal details
       throw new NotFoundException('No active payment order found.');
+    }
+  }
+}
+
+@ApiTags('public-payment-orders-full')
+@Controller('public/merchants/:merchantId/branches/:branchId/pos/:posId/orders')
+export class FullPublicPaymentOrderController {
+  private readonly logger = new Logger(FullPublicPaymentOrderController.name);
+
+  constructor(
+    private readonly paymentOrderService: PaymentOrderService,
+    private readonly posService: PosService,
+  ) {}
+
+  @Get('current')
+  @ApiOperation({
+    summary:
+      'Get current active payment order for a POS (Full path public endpoint)',
+  })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current active payment order.',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 404, description: 'No active payment order found.' })
+  async getCurrent(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('posId', new ParseUUIDPipe()) posId: UUID,
+  ): Promise<any> {
+    try {
+      // Verify the POS exists and belongs to the specified merchant and branch
+      const pos = await this.posService.findOne(merchantId, branchId, posId);
+
+      if (!pos.isActive) {
+        throw new NotFoundException(`POS ${posId} is not active`);
+      }
+
+      const order = await this.paymentOrderService.getCurrentByMerchant(
+        merchantId,
+        posId,
+      );
+
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+        expiresIn: order.expiresAt
+          ? Math.max(0, order.expiresAt.getTime() - Date.now())
+          : null,
+        qrCodeUrl: `/public/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders/current`,
+      };
+    } catch (error) {
+      this.logger.log(`Error getting current payment order: ${error.message}`);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException('No active payment order found.');
+    }
+  }
+
+  @Post(':orderId/trigger-in-progress')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Trigger payment order to in-progress status',
+  })
+  @ApiParam({
+    name: 'merchantId',
+    description: 'ID of the merchant',
+    type: 'string',
+  })
+  @ApiParam({
+    name: 'branchId',
+    description: 'ID of the branch',
+    type: 'string',
+  })
+  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  @ApiParam({
+    name: 'orderId',
+    description: 'ID of the payment order',
+    type: 'string',
+  })
+  @ApiHeader({ name: 'x-api-key', description: 'Payment API key' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment order status updated to in-progress.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - order not in active status.',
+  })
+  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  async triggerInProgress(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('posId', new ParseUUIDPipe()) posId: UUID,
+    @Param('orderId', new ParseUUIDPipe()) orderId: UUID,
+    @Headers('x-api-key') apiKey: string,
+  ): Promise<any> {
+    // Validate API key
+    if (!apiKey || apiKey !== 'test-payment-api-key-12345') {
+      throw new ForbiddenException('Invalid API key');
+    }
+
+    try {
+      // Verify the POS exists and belongs to the specified merchant and branch
+      await this.posService.findOne(merchantId, branchId, posId);
+
+      // Get the payment order
+      const order = await this.paymentOrderService.findOneByMerchant(
+        merchantId,
+        orderId,
+      );
+
+      if (!order) {
+        throw new NotFoundException('Payment order not found');
+      }
+
+      // Check if order belongs to the specified POS
+      if (order.pos.id !== posId) {
+        throw new ForbiddenException(
+          'Payment order does not belong to this POS',
+        );
+      }
+
+      // Check if order is in ACTIVE status
+      if (order.status !== PaymentOrderStatus.ACTIVE) {
+        throw new ForbiddenException(
+          'Only active orders can be triggered to in-progress',
+        );
+      }
+
+      // Update order status to IN_PROGRESS
+      const updatedOrder = await this.paymentOrderService.updateOrderStatus(
+        merchantId,
+        orderId,
+        PaymentOrderStatus.IN_PROGRESS,
+      );
+
+      return {
+        id: updatedOrder.id,
+        status: updatedOrder.status,
+        message: 'Payment order status updated to in-progress',
+      };
+    } catch (error) {
+      this.logger.log(`Error triggering in-progress: ${error.message}`);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new NotFoundException('Payment order not found');
     }
   }
 }

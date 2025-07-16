@@ -25,7 +25,7 @@ export class QrCodeService {
     );
 
     // Point to the public payment order page
-    const qrCodeUrl = `${baseUrl}/payment-order/${posId}`;
+    const qrCodeUrl = `${baseUrl}/payment/${posId}`;
 
     this.logger.log(`Generated QR code URL for POS ${posId}: ${qrCodeUrl}`);
 
@@ -74,7 +74,7 @@ export class QrCodeService {
       'FRONTEND_URL',
       'http://localhost:3000',
     );
-    const qrCodeUrl = `${baseUrl}/payment-order/${posId}`;
+    const qrCodeUrl = `${baseUrl}/payment/${posId}`;
 
     this.logger.log(`Generated simplified QR code URL for POS ${posId}: ${qrCodeUrl}`);
 

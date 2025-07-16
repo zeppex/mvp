@@ -152,11 +152,11 @@ export class BranchController {
   ): Promise<Branch> {
     let merchantId = req.user.merchantId;
 
-    // For superadmin, we need merchantId from request body
+    // For superadmin, we need merchantId from query params
     if (!merchantId) {
-      merchantId = (updateBranchDto as any).merchantId;
+      merchantId = req.query.merchantId as string;
       if (!merchantId) {
-        throw new ForbiddenException('Merchant ID is required');
+        throw new ForbiddenException('Merchant ID is required for superadmin');
       }
     }
 

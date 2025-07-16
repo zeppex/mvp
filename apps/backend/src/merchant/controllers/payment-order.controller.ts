@@ -61,9 +61,19 @@ export class PaymentOrderController {
     try {
       const merchantId = req.user.merchantId;
       const posId = dto.posId;
+      const user = req.user;
 
       if (!posId) {
         throw new BadRequestException('POS ID is required');
+      }
+
+      // For CASHIER role, check if they are assigned to the specific POS
+      if (user.role === UserRole.CASHIER) {
+        if (!user.posId || user.posId !== posId) {
+          throw new BadRequestException(
+            'Cashier can only create orders for their assigned POS',
+          );
+        }
       }
 
       const order = await this.orderService.createByMerchant(

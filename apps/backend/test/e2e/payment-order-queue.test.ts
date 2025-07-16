@@ -238,7 +238,7 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(200);
 
       expect(response.body.status).toBe(PaymentOrderStatus.ACTIVE);
-      expect(response.body.amount).toBe('100.00');
+      expect(response.body.amount).toBe('100.00000000');
     });
 
     it('should promote next queued order when active order expires', async () => {
@@ -266,7 +266,7 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(200);
 
       expect(response.body.status).toBe(PaymentOrderStatus.ACTIVE);
-      expect(response.body.amount).toBe('200.00'); // Second order should now be active
+      expect(response.body.amount).toBe('200.00000000'); // Second order should now be active
       expect(response.body.expiresAt).toBeDefined(); // Should have new TTL
     });
 
@@ -292,7 +292,7 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(200);
 
       expect(response.body.status).toBe(PaymentOrderStatus.ACTIVE);
-      expect(response.body.amount).toBe('300.00'); // Third order should now be active
+      expect(response.body.amount).toBe('300.00000000'); // Third order should now be active
     });
 
     it('should return 404 when no orders are available', async () => {

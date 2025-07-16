@@ -305,7 +305,10 @@ describe('Multi-Tenant Architecture E2E Tests', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${merchant1AdminToken}`)
-        .send(branch1Data)
+        .send({
+          ...branch1Data,
+          merchantId: merchant2Id, // Try to create for merchant 2
+        })
         .expect(403);
     });
 
@@ -313,7 +316,10 @@ describe('Multi-Tenant Architecture E2E Tests', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/branches`)
         .set('Authorization', `Bearer ${merchant2AdminToken}`)
-        .send(branch2Data)
+        .send({
+          ...branch2Data,
+          merchantId: merchant1Id, // Try to create for merchant 1
+        })
         .expect(403);
     });
 
@@ -378,6 +384,7 @@ describe('Multi-Tenant Architecture E2E Tests', () => {
         .send({
           ...pos1Data,
           branchId: merchant2Branch1Id,
+          merchantId: merchant2Id, // Try to create for merchant 2
         })
         .expect(403);
     });
@@ -444,9 +451,9 @@ describe('Multi-Tenant Architecture E2E Tests', () => {
         .set('Authorization', `Bearer ${merchant1AdminToken}`)
         .send({
           ...paymentOrder1Data,
-          posId: merchant2Pos1Id,
+          posId: merchant2Pos1Id, // Try to create for merchant 2's POS
         })
-        .expect(403);
+        .expect(404); // POS not found for merchant 1
     });
 
     it('should verify merchant 1 admin can only see their own payment orders', async () => {
@@ -616,7 +623,7 @@ describe('Multi-Tenant Architecture E2E Tests', () => {
           description: `Unauthorized order ${testSuffix}`,
           posId: merchant1Pos1Id,
         })
-        .expect(403);
+        .expect(400); // Bad Request - Cashier can only create orders for their assigned POS
     });
   });
 

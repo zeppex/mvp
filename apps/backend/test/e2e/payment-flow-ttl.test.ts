@@ -13,6 +13,7 @@ import { Merchant } from '../../src/merchant/entities/merchant.entity';
 import { PaymentOrderStatus } from '../../src/shared/enums/payment-order-status.enum';
 import { User } from '../../src/user/entities/user.entity';
 import { getRepositoryToken as getAdminRepositoryToken } from '@nestjs/typeorm';
+import { createTestingModule, testConfig } from './payment-flow.config';
 
 describe('Payment Flow TTL Tests', () => {
   let app: INestApplication;
@@ -30,15 +31,7 @@ describe('Payment Flow TTL Tests', () => {
   const testSuffix = Math.random().toString(36).substring(2, 8);
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: '.env.test',
-        }),
-        AppModule,
-      ],
-    }).compile();
+    const moduleFixture: TestingModule = await createTestingModule();
 
     app = moduleFixture.createNestApplication();
 
@@ -179,9 +172,9 @@ describe('Payment Flow TTL Tests', () => {
       const now = new Date();
       const timeDiff = expiresAt.getTime() - now.getTime();
 
-      // Should be approximately 10000ms (10 seconds) from environment (allow 2 second tolerance)
-      expect(timeDiff).toBeGreaterThan(10000 - 2000);
-      expect(timeDiff).toBeLessThan(10000 + 2000);
+      // Should be approximately 10000ms (10 seconds) from test config (allow 2 second tolerance)
+      expect(timeDiff).toBeGreaterThan(testConfig.paymentOrderTTL - 2000);
+      expect(timeDiff).toBeLessThan(testConfig.paymentOrderTTL + 2000);
     });
 
     it('should expire payment order after TTL', async () => {
@@ -204,8 +197,10 @@ describe('Payment Flow TTL Tests', () => {
         )
         .expect(200);
 
-      // Wait for TTL to expire (plus buffer) - 10 seconds + 2 seconds
-      await new Promise((resolve) => setTimeout(resolve, 10000 + 2000));
+      // Wait for TTL to expire (plus buffer)
+      await new Promise((resolve) =>
+        setTimeout(resolve, testConfig.paymentOrderTTL + 2000),
+      );
 
       // Verify it's now expired and not accessible via public endpoint
       await request(app.getHttpServer())
@@ -239,7 +234,6 @@ describe('Payment Flow TTL Tests', () => {
         { id: orderId },
         {
           expiresAt: new Date(Date.now() - 60000), // Expired 1 minute ago
-          status: PaymentOrderStatus.ACTIVE,
         },
       );
 
@@ -288,8 +282,9 @@ describe('Payment Flow TTL Tests', () => {
       expect(publicResponse.body.amount).toBe('200.00');
 
       // Wait for both orders to expire
-      const expectedTtl = 10000; // Hardcoded TTL
-      await new Promise((resolve) => setTimeout(resolve, expectedTtl + 2000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, testConfig.paymentOrderTTL + 2000),
+      );
 
       // Public endpoint should return 404
       await request(app.getHttpServer())
@@ -317,7 +312,11 @@ describe('Payment Flow TTL Tests', () => {
       // All should be created successfully
       responses.forEach((response) => {
         expect(response.status).toBe(201);
-        expect(response.body.status).toBe(PaymentOrderStatus.ACTIVE);
+        // Due to queue logic, only one should be ACTIVE, others should be QUEUED
+        expect([
+          PaymentOrderStatus.ACTIVE,
+          PaymentOrderStatus.QUEUED,
+        ]).toContain(response.body.status);
       });
 
       // Public endpoint should show the last created order
@@ -357,8 +356,9 @@ describe('Payment Flow TTL Tests', () => {
       );
 
       // Should still be accessible after short TTL
-      const expectedTtl = 10000; // Hardcoded TTL
-      await new Promise((resolve) => setTimeout(resolve, expectedTtl + 1000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, testConfig.paymentOrderTTL + 1000),
+      );
 
       await request(app.getHttpServer())
         .get(

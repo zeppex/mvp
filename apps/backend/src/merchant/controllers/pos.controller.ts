@@ -158,11 +158,11 @@ export class PosController {
   ): Promise<Pos> {
     let merchantId = req.user.merchantId;
 
-    // For superadmin, we need merchantId from request body
+    // For superadmin, we need merchantId from query params
     if (!merchantId) {
-      merchantId = (updatePosDto as any).merchantId;
+      merchantId = req.query.merchantId as string;
       if (!merchantId) {
-        throw new ForbiddenException('Merchant ID is required');
+        throw new ForbiddenException('Merchant ID is required for superadmin');
       }
     }
 
@@ -199,15 +199,55 @@ export class PosController {
     return this.posService.removeByMerchant(merchantId, id);
   }
 
+  @Get(':id/qr-code')
+  @ApiOperation({ summary: 'Get QR code information for a POS' })
+  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return QR code information.',
+  })
+  @ApiResponse({ status: 404, description: 'POS not found.' })
+  async getQrCode(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Request() req,
+  ): Promise<any> {
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
+    // Verify POS belongs to merchant
+    const pos = await this.posService.findOneByMerchant(merchantId, id);
+
+    // Get QR code information
+    const qrCodeInfo = await this.posService.getQrCode(
+      merchantId,
+      pos.branch.id,
+      id,
+    );
+
+    return {
+      posId: id,
+      posName: pos.name,
+      qrCodeUrl: qrCodeInfo.qrCodeUrl,
+      qrCodeImageUrl: qrCodeInfo.qrCodeImageUrl,
+    };
+  }
+
   @Get(':id/paymentorder')
   @ApiOperation({ summary: 'Get current payment order for a POS' })
   @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
   @ApiResponse({
     status: 200,
-    description: 'Return current active payment order',
+    description: 'Return the current payment order.',
     type: PaymentOrder,
   })
-  @ApiResponse({ status: 404, description: 'No active order for pos' })
+  @ApiResponse({ status: 404, description: 'POS or payment order not found.' })
   async getCurrentPaymentOrder(
     @Param('id', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
@@ -222,8 +262,75 @@ export class PosController {
       }
     }
 
-    // Verify POS belongs to merchant before getting payment order
+    // Verify POS belongs to merchant
     await this.posService.findOneByMerchant(merchantId, posId);
+
     return this.paymentOrderService.getCurrentByMerchant(merchantId, posId);
+  }
+}
+
+@ApiTags('pos-full-path')
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
+@Controller('merchants/:merchantId/branches/:branchId/pos')
+export class PosFullPathController {
+  private readonly logger = new Logger(PosFullPathController.name);
+
+  constructor(private readonly posService: PosService) {}
+
+  @Get(':id/qr-code')
+  @ApiOperation({ summary: 'Get QR code information for a POS (full path)' })
+  @ApiParam({ name: 'merchantId', description: 'Merchant ID', type: 'string' })
+  @ApiParam({ name: 'branchId', description: 'Branch ID', type: 'string' })
+  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return QR code information.',
+  })
+  @ApiResponse({ status: 404, description: 'POS not found.' })
+  async getQrCode(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+  ): Promise<any> {
+    // Verify POS belongs to merchant and branch
+    const pos = await this.posService.findOne(merchantId, branchId, id);
+
+    // Get QR code information
+    const qrCodeInfo = await this.posService.getQrCode(
+      merchantId,
+      branchId,
+      id,
+    );
+
+    return {
+      posId: id,
+      posName: pos.name,
+      qrCodeUrl: qrCodeInfo.qrCodeUrl,
+      qrCodeImageUrl: qrCodeInfo.qrCodeImageUrl,
+    };
+  }
+
+  @Put(':id')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
+  @ApiOperation({ summary: 'Update a POS (full path)' })
+  @ApiParam({ name: 'merchantId', description: 'Merchant ID', type: 'string' })
+  @ApiParam({ name: 'branchId', description: 'Branch ID', type: 'string' })
+  @ApiParam({ name: 'id', description: 'POS ID', type: 'string' })
+  @ApiBody({ type: UpdatePosDto })
+  @ApiResponse({
+    status: 200,
+    description: 'POS successfully updated.',
+    type: Pos,
+  })
+  @ApiResponse({ status: 404, description: 'POS not found.' })
+  async update(
+    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
+    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Body() updatePosDto: UpdatePosDto,
+  ): Promise<Pos> {
+    // Verify POS belongs to merchant and branch before updating
+    await this.posService.findOne(merchantId, branchId, id);
+    return this.posService.update(merchantId, branchId, id, updatePosDto);
   }
 }

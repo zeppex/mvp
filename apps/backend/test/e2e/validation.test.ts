@@ -93,6 +93,7 @@ describe('Validation E2E Tests', () => {
         address: '456 Validation Avenue, Test Town, TT 67890',
         contactName: 'Branch Validation',
         contactPhone: '+12345678902',
+        merchantId: merchantId,
       });
 
     branchId = branchResponse.body.id;
@@ -105,6 +106,7 @@ describe('Validation E2E Tests', () => {
         name: 'Validation Test POS',
         description: 'POS for validation testing',
         branchId: branchId,
+        merchantId: merchantId,
       });
 
     posId = posResponse.body.id;
@@ -271,6 +273,7 @@ describe('Validation E2E Tests', () => {
           address: '123 Valid Street, Valid City, VC 12345',
           contactName: `Valid Contact ${testSuffix}`,
           contactPhone: '+12345678910',
+          merchantId: merchantId,
         })
         .expect(201);
     });
@@ -320,6 +323,7 @@ describe('Validation E2E Tests', () => {
           name: `Valid Test POS ${testSuffix}`,
           description: `Valid POS description ${testSuffix}`,
           branchId: branchId,
+          merchantId: merchantId,
         })
         .expect(201);
     });
@@ -529,6 +533,7 @@ describe('Validation E2E Tests', () => {
           address: '456 Update Avenue, Test Town, TT 67890',
           contactName: `Update Branch ${testSuffix}`,
           contactPhone: '+12345678912',
+          merchantId: testMerchantId,
         });
 
       testBranchId = branchResponse.body.id;
@@ -539,6 +544,8 @@ describe('Validation E2E Tests', () => {
         .send({
           name: `Update Test POS ${testSuffix}`,
           description: `POS for update testing ${testSuffix}`,
+          branchId: testBranchId,
+          merchantId: testMerchantId,
         });
 
       testPosId = posResponse.body.id;
@@ -566,7 +573,7 @@ describe('Validation E2E Tests', () => {
 
     it('should accept partial branch update with valid data', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/branches/${testBranchId}`)
+        .put(`/api/v1/branches/${testBranchId}?merchantId=${testMerchantId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'Updated Branch Name',
@@ -586,7 +593,7 @@ describe('Validation E2E Tests', () => {
 
     it('should accept partial POS update with valid data', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/pos/${testPosId}`)
+        .put(`/api/v1/pos/${testPosId}?merchantId=${testMerchantId}`)
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
           name: 'Updated POS Name',
