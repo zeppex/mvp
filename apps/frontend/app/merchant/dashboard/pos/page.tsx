@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { QrCode } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { QRCode } from "@/components/ui/qr-code"
 
 export default function PointOfSale() {
   const [amount, setAmount] = useState("")
@@ -90,7 +91,11 @@ export default function PointOfSale() {
           </DialogHeader>
           <div className="flex flex-col items-center justify-center p-6">
             <div className="bg-white p-4 rounded-lg">
-              <QrCode className="h-48 w-48" />
+              <QRCode 
+                value={`http://localhost:3000/payment/example-pos-id?amount=${amount}&description=${encodeURIComponent(description)}`}
+                size={192}
+                level="M"
+              />
             </div>
             <div className="mt-4 text-center">
               <p className="font-semibold">${amount}</p>

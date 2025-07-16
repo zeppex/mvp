@@ -39,19 +39,25 @@ export class PosService {
       branch: { id: branchId } as any,
     });
 
-    // Generate QR code for the POS
+    // Save the POS first to get the ID
+    const savedPos = await this.posRepository.save(pos);
+
+    // Generate payment link for the POS after it's saved (so we have the ID)
     const qrCode = this.qrCodeService.generatePosQrCode(
       merchantId,
       branchId,
-      pos.id,
+      savedPos.id,
     );
-    pos.qrCode = qrCode.url;
+    savedPos.paymentLink = qrCode.url;
 
-    const savedPos = await this.posRepository.save(pos);
+    // Save again with the payment link
+    const finalPos = await this.posRepository.save(savedPos);
 
-    this.logger.log(`Created POS ${savedPos.id} with QR code: ${pos.qrCode}`);
+    this.logger.log(
+      `Created POS ${finalPos.id} with payment link: ${finalPos.paymentLink}`,
+    );
 
-    return savedPos;
+    return finalPos;
   }
 
   async findAll(
@@ -188,15 +194,17 @@ export class PosService {
 
     Object.assign(pos, updatePosDto);
 
-    // Regenerate QR code if it doesn't exist or if POS details changed
-    if (!pos.qrCode || updatePosDto.name || updatePosDto.description) {
+    // Regenerate payment link if it doesn't exist or if POS details changed
+    if (!pos.paymentLink || updatePosDto.name || updatePosDto.description) {
       const qrCode = this.qrCodeService.generatePosQrCode(
         merchantId,
         branchId,
         pos.id,
       );
-      pos.qrCode = qrCode.url;
-      this.logger.log(`Updated QR code for POS ${pos.id}: ${pos.qrCode}`);
+      pos.paymentLink = qrCode.url;
+      this.logger.log(
+        `Updated payment link for POS ${pos.id}: ${pos.paymentLink}`,
+      );
     }
 
     return this.posRepository.save(pos);
@@ -211,15 +219,15 @@ export class PosService {
 
     Object.assign(pos, updatePosDto);
 
-    // Regenerate QR code if it doesn't exist or if POS details changed
-    if (!pos.qrCode || updatePosDto.name || updatePosDto.description) {
+    // Regenerate payment link if it doesn't exist or if POS details changed
+    if (!pos.paymentLink || updatePosDto.name || updatePosDto.description) {
       const qrCode = this.qrCodeService.generatePosQrCode(
         merchantId,
         pos.branch.id,
         pos.id,
       );
-      pos.qrCode = qrCode.url;
-      this.logger.log(`Updated QR code for POS ${pos.id}: ${pos.qrCode}`);
+      pos.paymentLink = qrCode.url;
+      this.logger.log(`Updated payment link for POS ${pos.id}: ${pos.paymentLink}`);
     }
 
     return this.posRepository.save(pos);
@@ -282,14 +290,14 @@ export class PosService {
   async getQrCode(merchantId: UUID, branchId: UUID, posId: UUID) {
     const pos = await this.findOne(merchantId, branchId, posId);
 
-    if (!pos.qrCode) {
-      // Generate QR code if it doesn't exist
+    if (!pos.paymentLink) {
+      // Generate payment link if it doesn't exist
       const qrCode = this.qrCodeService.generatePosQrCode(
         merchantId,
         branchId,
         posId,
       );
-      pos.qrCode = qrCode.url;
+      pos.paymentLink = qrCode.url;
       await this.posRepository.save(pos);
     }
 

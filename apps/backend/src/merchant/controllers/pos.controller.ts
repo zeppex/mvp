@@ -129,12 +129,19 @@ export class PosController {
   ): Promise<Pos> {
     let merchantId = req.user.merchantId;
 
-    // For superadmin, we need merchantId from query params
+    // For superadmin, try to get merchantId from query params first
     if (!merchantId) {
       merchantId = req.query.merchantId as string;
-      if (!merchantId) {
-        throw new ForbiddenException('Merchant ID is required');
-      }
+    }
+
+    // If still no merchantId and user is superadmin, find the POS first to get merchant context
+    if (!merchantId && req.user.role === 'superadmin') {
+      const pos = await this.posService.findOneByPosId(id);
+      merchantId = pos.branch.merchant.id;
+    }
+
+    if (!merchantId) {
+      throw new ForbiddenException('Merchant ID is required');
     }
 
     return this.posService.findOneByMerchant(merchantId, id);
@@ -158,12 +165,19 @@ export class PosController {
   ): Promise<Pos> {
     let merchantId = req.user.merchantId;
 
-    // For superadmin, we need merchantId from query params
+    // For superadmin, try to get merchantId from query params first
     if (!merchantId) {
       merchantId = req.query.merchantId as string;
-      if (!merchantId) {
-        throw new ForbiddenException('Merchant ID is required for superadmin');
-      }
+    }
+
+    // If still no merchantId and user is superadmin, find the POS first to get merchant context
+    if (!merchantId && req.user.role === 'superadmin') {
+      const pos = await this.posService.findOneByPosId(id);
+      merchantId = pos.branch.merchant.id;
+    }
+
+    if (!merchantId) {
+      throw new ForbiddenException('Merchant ID is required');
     }
 
     // Verify POS belongs to merchant before updating

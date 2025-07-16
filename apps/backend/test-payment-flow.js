@@ -68,7 +68,7 @@ async function testPaymentFlow() {
 
     const posId = posResponse.data.id;
     console.log(`✅ POS created: ${posId}`);
-    console.log(`   QR Code URL: ${posResponse.data.qrCode}\n`);
+    console.log(`   Payment Link: ${posResponse.data.paymentLink}\n`);
 
     // Step 5: Get QR code information
     console.log('5. Getting QR code information...');

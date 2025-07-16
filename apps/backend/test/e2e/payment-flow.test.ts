@@ -188,9 +188,11 @@ describe('Payment Flow E2E Tests', () => {
         .expect(201);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('qrCode');
+      expect(response.body).toHaveProperty('paymentLink');
       expect(response.body.name).toBe(`Test Payment POS ${testSuffix}`);
-      expect(response.body.qrCode).toContain('http://localhost:3000/payment/');
+      expect(response.body.paymentLink).toContain(
+        'http://localhost:3000/payment/',
+      );
 
       posId = response.body.id;
     });
@@ -231,9 +233,11 @@ describe('Payment Flow E2E Tests', () => {
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty('qrCode');
+      expect(response.body).toHaveProperty('paymentLink');
       expect(response.body.name).toBe(`Updated Test Payment POS ${testSuffix}`);
-      expect(response.body.qrCode).toContain('http://localhost:3000/payment/');
+      expect(response.body.paymentLink).toContain(
+        'http://localhost:3000/payment/',
+      );
     });
   });
 

@@ -26,13 +26,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import Image from "next/image";
+import { QRCode } from "@/components/ui/qr-code";
 
 interface Pos {
   id: string;
   name: string;
   description: string;
-  qrCode: string;
+  paymentLink: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -268,10 +268,14 @@ export default function PosDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {pos.currentPaymentOrder && pos.currentPaymentOrder.status === "ACTIVE" ? "Active" : "None"}
+              {pos.currentPaymentOrder &&
+              pos.currentPaymentOrder.status === "ACTIVE"
+                ? "Active"
+                : "None"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {pos.currentPaymentOrder && pos.currentPaymentOrder.status === "ACTIVE"
+              {pos.currentPaymentOrder &&
+              pos.currentPaymentOrder.status === "ACTIVE"
                 ? formatCurrency(
                     pos.currentPaymentOrder.amount,
                     pos.currentPaymentOrder.currency
@@ -361,29 +365,33 @@ export default function PosDetailPage() {
               </div>
             </div>
 
-            {/* QR Code */}
-            {pos.qrCode && (
+            {/* Payment Link */}
+            {pos.paymentLink && (
               <>
                 <Separator />
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <QrCode className="h-4 w-4 text-muted-foreground" />
-                    QR Code
+                    Payment Link
                   </div>
                   <div className="flex justify-center">
                     <div className="border rounded-lg p-4 bg-white">
-                      <Image
-                        src={pos.qrCode}
-                        alt="POS QR Code"
-                        width={200}
-                        height={200}
-                        className="rounded"
-                      />
+                      <QRCode value={pos.paymentLink} size={200} level="M" />
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
                     Scan this QR code to access the payment terminal
                   </p>
+                  <div className="text-center">
+                    <a
+                      href={pos.paymentLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {pos.paymentLink}
+                    </a>
+                  </div>
                 </div>
               </>
             )}

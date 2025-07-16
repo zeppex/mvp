@@ -25,7 +25,7 @@ export class Pos {
   description: string;
 
   @Column({ nullable: true })
-  qrCode: string;
+  paymentLink: string;
 
   @Column({ default: true })
   isActive: boolean;
