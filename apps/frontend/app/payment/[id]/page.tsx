@@ -1,36 +1,124 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowRight, CheckCircle2, Store } from "lucide-react"
+import {
+  ArrowRight,
+  CheckCircle2,
+  Store,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import Link from "next/link"
 
-export default function PaymentPage({ params }: { params: { id: string } }) {
-  const [selectedExchange, setSelectedExchange] = useState("")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isComplete, setIsComplete] = useState(false)
+interface PaymentOrder {
+  id: string;
+  amount: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  expiresAt?: string;
+  expiresIn?: number;
+  pos: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  branch: {
+    id: string;
+    name: string;
+  };
+  merchant: {
+    id: string;
+    name: string;
+  };
+}
 
-  // Mock payment data - would come from API in production
-  const paymentData = {
-    id: params.id,
-    amount: 10.0,
-    description: "2 Venti Lattes",
-    merchant: "Starbucks - Unicenter 2",
-    created: new Date().toISOString(),
-  }
+export default function PaymentPage({ params }: { params: { id: string } }) {
+  const [selectedExchange, setSelectedExchange] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<PaymentOrder | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPaymentOrder = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `/api/public/payment-order/pos/${params.id}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to fetch payment order");
+        }
+
+        const data = await response.json();
+        setPaymentOrder(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchPaymentOrder();
+    }
+  }, [params.id]);
 
   const handleProceed = () => {
-    if (!selectedExchange) return
+    if (!selectedExchange || !paymentOrder) return;
 
-    setIsProcessing(true)
+    setIsProcessing(true);
 
     // Simulate payment processing
     setTimeout(() => {
-      setIsProcessing(false)
-      setIsComplete(true)
-    }, 2000)
+      setIsProcessing(false);
+      setIsComplete(true);
+    }, 2000);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Loading payment details...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !paymentOrder) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="text-center">
+              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Payment Not Found</h3>
+              <p className="text-muted-foreground mb-4">
+                {error || "No active payment order found for this POS"}
+              </p>
+              <Button asChild>
+                <Link href="/">Return to Home</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (isComplete) {
@@ -42,25 +130,29 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
               <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-2xl">Payment Successful!</CardTitle>
-            <CardDescription>Your payment has been processed successfully</CardDescription>
+            <CardDescription>
+              Your payment has been processed successfully
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-medium">${paymentData.amount.toFixed(2)}</p>
+                  <p className="font-medium">${paymentOrder.amount}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Merchant</p>
-                  <p className="font-medium">{paymentData.merchant}</p>
+                  <p className="font-medium">{paymentOrder.merchant.name}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Description</p>
-                  <p className="font-medium">{paymentData.description}</p>
+                  <p className="font-medium">{paymentOrder.description}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Payment Method</p>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method
+                  </p>
                   <p className="font-medium">{selectedExchange}</p>
                 </div>
               </div>
@@ -73,7 +165,7 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -85,8 +177,12 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
               Zeppex
             </Link>
           </div>
-          <CardTitle className="text-2xl text-center">Complete Your Payment</CardTitle>
-          <CardDescription className="text-center">Select your preferred crypto exchange to continue</CardDescription>
+          <CardTitle className="text-2xl text-center">
+            Complete Your Payment
+          </CardTitle>
+          <CardDescription className="text-center">
+            Select your preferred crypto exchange to continue
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="rounded-lg border p-4">
@@ -95,25 +191,40 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
                 <Store className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">{paymentData.merchant}</p>
-                <p className="text-sm text-muted-foreground">Merchant</p>
+                <p className="font-medium">{paymentOrder.merchant.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {paymentOrder.branch.name}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Amount</p>
-                <p className="font-medium">${paymentData.amount.toFixed(2)}</p>
+                <p className="font-medium">${paymentOrder.amount}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Description</p>
-                <p className="font-medium">{paymentData.description}</p>
+                <p className="font-medium">{paymentOrder.description}</p>
               </div>
             </div>
+            {paymentOrder.expiresIn && paymentOrder.expiresIn > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Expires in: {Math.floor(paymentOrder.expiresIn / 1000)}{" "}
+                  seconds
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select Crypto Exchange</label>
-            <Select value={selectedExchange} onValueChange={setSelectedExchange}>
+            <label className="text-sm font-medium">
+              Select Crypto Exchange
+            </label>
+            <Select
+              value={selectedExchange}
+              onValueChange={setSelectedExchange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Choose an exchange" />
               </SelectTrigger>
@@ -141,7 +252,11 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
           </div>
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={handleProceed} disabled={!selectedExchange || isProcessing}>
+          <Button
+            className="w-full"
+            onClick={handleProceed}
+            disabled={!selectedExchange || isProcessing}
+          >
             {isProcessing ? (
               "Processing..."
             ) : (
@@ -153,5 +268,6 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
+

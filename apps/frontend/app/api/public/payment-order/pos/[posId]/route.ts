@@ -7,19 +7,24 @@ export async function GET(
   { params }: { params: { posId: string } }
 ) {
   try {
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/public/payment-order/pos/${params.posId}`
-    );
+    const url = `${BACKEND_URL}/api/v1/public/pos/${params.posId}/orders/current`;
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    const apiRes = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!apiRes.ok) {
+      const errorData = await apiRes.json();
       return NextResponse.json(
         { message: errorData.message || "Failed to fetch payment order" },
-        { status: response.status }
+        { status: apiRes.status }
       );
     }
 
-    const paymentOrder = await response.json();
+    const paymentOrder = await apiRes.json();
     return NextResponse.json(paymentOrder);
   } catch (error) {
     console.error("Fetch payment order error:", error);
