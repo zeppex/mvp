@@ -1,2 +1,0 @@
-- armar tracking de sesiones, loging, etc.
-- armar lotes de transacciones operaciones cuando se logea / deslogea

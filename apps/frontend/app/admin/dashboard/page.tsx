@@ -1,274 +1,167 @@
-"use client"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { BarChart3, Building, CheckCircle2, Clock, DollarSign, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { Progress } from "@/components/ui/progress"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Building, DollarSign, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { UserRole } from "@/types/enums";
-import { useSession } from "next-auth/react";
-import { withNextAuth } from "@/components/withNextAuth";
-
-// Admin dashboard component protected by withNextAuth HOC
-const AdminDashboard = withNextAuth(
-  () => {
-    const { data: session } = useSession();
-    return <DashboardContent session={session!} />;
-  },
-  {
-    requiredRoles: [UserRole.SUPERADMIN, UserRole.ADMIN],
-    loginUrl: "/admin/login",
-  }
-);
-
-// Export default AdminDashboard
-export default AdminDashboard;
-
-// Inner dashboard content
-function DashboardContent({
-  session,
-}: {
-  session: import("next-auth").Session;
-}) {
+export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Welcome back, {session.user.firstName || "Admin"}
-          </h2>
-          <p className="text-muted-foreground">
-            Here&apos;s an overview of the Zeppex platform
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight">Welcome back, Admin</h2>
+          <p className="text-muted-foreground">Here&apos;s an overview of the Zeppex platform.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild className="mr-2">
-            <Link href="/admin/merchants/create">Add New Merchant</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/admin/merchants">Manage Merchants</Link>
+          <Button asChild>
+            <Link href="/admin/dashboard/merchants/new">Add New Merchant</Link>
           </Button>
         </div>
       </div>
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Merchants
-                </CardTitle>
-                <Building className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">42</div>
-                <p className="text-xs text-muted-foreground">
-                  +5 from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Users
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">237</div>
-                <p className="text-xs text-muted-foreground">
-                  +24 from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Revenue
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$24,312</div>
-                <p className="text-xs text-muted-foreground">
-                  +12.5% from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Transactions
-                </CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">573</div>
-                <p className="text-xs text-muted-foreground">
-                  +201 since yesterday
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="lg:col-span-4">
-              <CardHeader>
-                <CardTitle>Merchant Activity</CardTitle>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <div className="h-[200px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-muted-foreground">
-                  Merchant Activity Chart
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Recent Onboardings</CardTitle>
-                <CardDescription>Recently added merchants</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 flex items-center justify-center bg-blue-100 dark:bg-blue-900 rounded-full">
-                        <span className="font-medium text-blue-600 dark:text-blue-300">
-                          SB
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Starbucks Coffee</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added 2 days ago
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 flex items-center justify-center bg-purple-100 dark:bg-purple-900 rounded-full">
-                        <span className="font-medium text-purple-600 dark:text-purple-300">
-                          TH
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Tech Horizon</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added 3 days ago
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 flex items-center justify-center bg-green-100 dark:bg-green-900 rounded-full">
-                        <span className="font-medium text-green-600 dark:text-green-300">
-                          UF
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Urban Fusion</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added 5 days ago
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 flex items-center justify-center bg-amber-100 dark:bg-amber-900 rounded-full">
-                        <span className="font-medium text-amber-600 dark:text-amber-300">
-                          GS
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Grocery Stop</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added 1 week ago
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="lg:col-span-7">
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-                <CardDescription>
-                  Platform-wide analytics for the past 30 days
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <div className="h-[350px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-muted-foreground">
-                  Analytics Charts
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="reports" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="lg:col-span-7">
-              <CardHeader>
-                <CardTitle>Reports</CardTitle>
-                <CardDescription>
-                  Generate and download system reports
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Button>Merchant Report</Button>
-                    <Button>Transaction Report</Button>
-                    <Button>Revenue Report</Button>
-                    <Button>Custom Report</Button>
-                  </div>
-                  <div className="h-[200px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-muted-foreground">
-                    Report Preview
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
 
-      {/* Auth debug info for development */}
-      <div className="pt-8 border-t">
-        <h3 className="text-lg font-semibold mb-4">Auth Session Info</h3>
-        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded">
-          <pre className="text-xs overflow-auto">
-            {JSON.stringify(session, null, 2)}
-          </pre>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Merchants</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">42</div>
+            <p className="text-xs text-muted-foreground">+3 this month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$128,430.00</div>
+            <p className="text-xs text-muted-foreground">+12.5% from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">1,205</div>
+            <p className="text-xs text-muted-foreground">+18% from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Commission Revenue</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$5,137.20</div>
+            <p className="text-xs text-muted-foreground">+8.2% from last month</p>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Recent Merchants</CardTitle>
+            <CardDescription>Recently added merchants to the platform.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="ml-4 space-y-1">
+                <p className="text-sm font-medium leading-none">Howtradethat</p>
+                <p className="text-sm text-muted-foreground">Retail - 3 locations</p>
+              </div>
+              <div className="ml-auto text-right">
+                <div className="font-medium flex items-center justify-end gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Active
+                </div>
+                <div className="text-xs text-muted-foreground">2 days ago</div>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="ml-4 space-y-1">
+                <p className="text-sm font-medium leading-none">Tech Gadgets Inc</p>
+                <p className="text-sm text-muted-foreground">Electronics - 1 location</p>
+              </div>
+              <div className="ml-auto text-right">
+                <div className="font-medium flex items-center justify-end gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Active
+                </div>
+                <div className="text-xs text-muted-foreground">5 days ago</div>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
+                <Building className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="ml-4 space-y-1">
+                <p className="text-sm font-medium leading-none">Fitness First</p>
+                <p className="text-sm text-muted-foreground">Fitness - 2 locations</p>
+              </div>
+              <div className="ml-auto text-right">
+                <div className="font-medium flex items-center justify-end gap-1">
+                  <Clock className="h-4 w-4 text-amber-500" />
+                  Pending
+                </div>
+                <div className="text-xs text-muted-foreground">1 week ago</div>
+              </div>
+            </div>
+            <div className="pt-2 flex justify-center">
+              <Button variant="outline" asChild>
+                <Link href="/admin/dashboard/merchants">View All Merchants</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Transaction Status</CardTitle>
+            <CardDescription>Overview of transaction statuses across the platform.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-muted-foreground">Completed</span>
+                </div>
+                <span className="text-sm font-medium">85%</span>
+              </div>
+              <Progress value={85} className="h-2" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-sm text-muted-foreground">Pending</span>
+                </div>
+                <span className="text-sm font-medium">10%</span>
+              </div>
+              <Progress value={10} className="h-2" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="text-sm text-muted-foreground">Failed</span>
+                </div>
+                <span className="text-sm font-medium">5%</span>
+              </div>
+              <Progress value={5} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  );
+  )
 }

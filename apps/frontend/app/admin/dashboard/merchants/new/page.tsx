@@ -16,61 +16,38 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import merchantApi from "@/lib/merchant-api";
 
 // Form validation schema
 const merchantFormSchema = z.object({
   // Basic Information
-  name: z
-    .string()
-    .min(2, { message: "Merchant name must be at least 2 characters." }),
-  branch: z
-    .string()
-    .min(2, { message: "Branch name must be at least 2 characters." }),
-  businessType: z
-    .string()
-    .min(1, { message: "Please select a business type." }),
+  name: z.string().min(2, { message: "Merchant name must be at least 2 characters." }),
+  branch: z.string().min(2, { message: "Branch name must be at least 2 characters." }),
+  businessType: z.string().min(1, { message: "Please select a business type." }),
   description: z.string().optional(),
 
   // Contact Information
-  contactName: z
-    .string()
-    .min(2, { message: "Contact name must be at least 2 characters." }),
-  contactEmail: z
-    .string()
-    .email({ message: "Please enter a valid email address." }),
-  contactPhone: z
-    .string()
-    .min(10, { message: "Please enter a valid phone number." }),
+  contactName: z.string().min(2, { message: "Contact name must be at least 2 characters." }),
+  contactEmail: z.string().email({ message: "Please enter a valid email address." }),
+  contactPhone: z.string().min(10, { message: "Please enter a valid phone number." }),
 
   // Location
-  address: z
-    .string()
-    .min(5, { message: "Address must be at least 5 characters." }),
+  address: z.string().min(5, { message: "Address must be at least 5 characters." }),
   city: z.string().min(2, { message: "City must be at least 2 characters." }),
   state: z.string().min(2, { message: "State must be at least 2 characters." }),
-  postalCode: z
-    .string()
-    .min(4, { message: "Postal code must be at least 4 characters." }),
-  country: z
-    .string()
-    .min(2, { message: "Country must be at least 2 characters." }),
+  postalCode: z.string().min(4, { message: "Postal code must be at least 4 characters." }),
+  country: z.string().min(2, { message: "Country must be at least 2 characters." }),
 
   // Financial Settings
   commission: z.coerce.number().min(0).max(100),
   cashback: z.coerce.number().min(0).max(100),
 
   // Account Settings
-  username: z
-    .string()
-    .min(4, { message: "Username must be at least 4 characters." }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters." }),
+  username: z.string().min(4, { message: "Username must be at least 4 characters." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   sendCredentials: z.boolean().default(true),
-});
+})
 
-type MerchantFormValues = z.infer<typeof merchantFormSchema>;
+type MerchantFormValues = z.infer<typeof merchantFormSchema>
 
 // Default values for the form
 const defaultValues: Partial<MerchantFormValues> = {
@@ -78,52 +55,35 @@ const defaultValues: Partial<MerchantFormValues> = {
   commission: 1.5,
   cashback: 0.5,
   sendCredentials: true,
-};
+}
 
 export default function NewMerchantPage() {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const form = useForm<MerchantFormValues>({
     resolver: zodResolver(merchantFormSchema),
     defaultValues,
-  });
+  })
 
   const onSubmit = async (data: MerchantFormValues) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
-    try {
-      // Call the actual merchant API to create the merchant
-      console.log("Creating merchant:", data);
+    // Simulate API call to create merchant
+    console.log("Creating merchant:", data)
 
-      // Create the merchant using the API
-      const merchantData = {
-        name: data.name,
-        address: `${data.address}, ${data.city}, ${data.state} ${data.postalCode}, ${data.country}`,
-        contact: data.contactEmail,
-        contactName: data.contactName,
-        contactPhone: data.contactPhone,
-      };
+    // Simulate delay for API call
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      console.log("📤 Sending merchant data:", merchantData);
-      const newMerchant = await merchantApi.createMerchant(merchantData);
-      console.log("Merchant created successfully:", newMerchant);
+    setIsSubmitting(false)
+    setIsSuccess(true)
 
-      setIsSubmitting(false);
-      setIsSuccess(true);
-
-      // Redirect after success
-      setTimeout(() => {
-        router.push("/admin/dashboard/merchants");
-      }, 2000);
-    } catch (error) {
-      console.error("Error creating merchant:", error);
-      setIsSubmitting(false);
-      // You might want to show an error message to the user here
-      alert("Failed to create merchant. Please try again.");
-    }
-  };
+    // Redirect after success
+    setTimeout(() => {
+      router.push("/admin/dashboard/merchants")
+    }, 2000)
+  }
 
   if (isSuccess) {
     return (
@@ -134,9 +94,7 @@ export default function NewMerchantPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Add New Merchant
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Add New Merchant</h2>
         </div>
 
         <Card className="border-green-200 dark:border-green-800">
@@ -148,8 +106,7 @@ export default function NewMerchantPage() {
               <CardTitle>Merchant Created Successfully</CardTitle>
             </div>
             <CardDescription>
-              The merchant has been added to the platform and can now start
-              accepting payments.
+              The merchant has been added to the platform and can now start accepting payments.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -157,14 +114,12 @@ export default function NewMerchantPage() {
           </CardContent>
           <CardFooter>
             <Button asChild>
-              <Link href="/admin/dashboard/merchants">
-                Return to Merchant List
-              </Link>
+              <Link href="/admin/dashboard/merchants">Return to Merchant List</Link>
             </Button>
           </CardFooter>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -193,9 +148,7 @@ export default function NewMerchantPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>
-                  <CardDescription>
-                    Enter the basic details about the merchant
-                  </CardDescription>
+                  <CardDescription>Enter the basic details about the merchant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
@@ -207,9 +160,7 @@ export default function NewMerchantPage() {
                         <FormControl>
                           <Input placeholder="Starbucks" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          The legal name of the business
-                        </FormDescription>
+                        <FormDescription>The legal name of the business</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -224,9 +175,7 @@ export default function NewMerchantPage() {
                         <FormControl>
                           <Input placeholder="Unicenter 2" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          The specific branch or location name
-                        </FormDescription>
+                        <FormDescription>The specific branch or location name</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -238,10 +187,7 @@ export default function NewMerchantPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select business type" />
@@ -249,19 +195,13 @@ export default function NewMerchantPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="food">
-                              Food & Beverage
-                            </SelectItem>
+                            <SelectItem value="food">Food & Beverage</SelectItem>
                             <SelectItem value="service">Service</SelectItem>
-                            <SelectItem value="ecommerce">
-                              E-commerce
-                            </SelectItem>
+                            <SelectItem value="ecommerce">E-commerce</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormDescription>
-                          The type of business the merchant operates
-                        </FormDescription>
+                        <FormDescription>The type of business the merchant operates</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -280,10 +220,7 @@ export default function NewMerchantPage() {
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
-                          A brief description of the merchant's business
-                          (optional)
-                        </FormDescription>
+                        <FormDescription>A brief description of the merchant's business (optional)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -295,14 +232,9 @@ export default function NewMerchantPage() {
                 <Button
                   type="button"
                   onClick={() =>
-                    form
-                      .trigger(["name", "branch", "businessType"])
-                      .then((isValid) => {
-                        if (isValid)
-                          document
-                            .querySelector('[data-value="contact"]')
-                            ?.click();
-                      })
+                    form.trigger(["name", "branch", "businessType"]).then((isValid) => {
+                      if (isValid) document.querySelector('[data-value="contact"]')?.click()
+                    })
                   }
                 >
                   Next: Contact Information
@@ -315,9 +247,7 @@ export default function NewMerchantPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Contact Information</CardTitle>
-                  <CardDescription>
-                    Enter contact details for the merchant
-                  </CardDescription>
+                  <CardDescription>Enter contact details for the merchant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -357,11 +287,7 @@ export default function NewMerchantPage() {
                       <FormItem>
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="contact@merchant.com"
-                            type="email"
-                            {...field}
-                          />
+                          <Input placeholder="contact@merchant.com" type="email" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -452,9 +378,7 @@ export default function NewMerchantPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() =>
-                    document.querySelector('[data-value="basic"]')?.click()
-                  }
+                  onClick={() => document.querySelector('[data-value="basic"]')?.click()}
                 >
                   Previous: Basic Information
                 </Button>
@@ -473,10 +397,7 @@ export default function NewMerchantPage() {
                         "country",
                       ])
                       .then((isValid) => {
-                        if (isValid)
-                          document
-                            .querySelector('[data-value="financial"]')
-                            ?.click();
+                        if (isValid) document.querySelector('[data-value="financial"]')?.click()
                       })
                   }
                 >
@@ -490,9 +411,7 @@ export default function NewMerchantPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Financial Settings</CardTitle>
-                  <CardDescription>
-                    Configure commission and cashback rates for this merchant
-                  </CardDescription>
+                  <CardDescription>Configure commission and cashback rates for this merchant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-8 md:grid-cols-2">
@@ -504,21 +423,14 @@ export default function NewMerchantPage() {
                           <FormLabel>Commission Rate (%)</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input
-                                type="number"
-                                step="0.1"
-                                min="0"
-                                max="100"
-                                {...field}
-                              />
+                              <Input type="number" step="0.1" min="0" max="100" {...field} />
                               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 %
                               </div>
                             </div>
                           </FormControl>
                           <FormDescription>
-                            The percentage fee charged to the merchant for each
-                            transaction
+                            The percentage fee charged to the merchant for each transaction
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -533,22 +445,13 @@ export default function NewMerchantPage() {
                           <FormLabel>Cashback Rate (%)</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input
-                                type="number"
-                                step="0.1"
-                                min="0"
-                                max="100"
-                                {...field}
-                              />
+                              <Input type="number" step="0.1" min="0" max="100" {...field} />
                               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 %
                               </div>
                             </div>
                           </FormControl>
-                          <FormDescription>
-                            The percentage returned to customers as cashback
-                            rewards
-                          </FormDescription>
+                          <FormDescription>The percentage returned to customers as cashback rewards</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -561,9 +464,7 @@ export default function NewMerchantPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() =>
-                    document.querySelector('[data-value="contact"]')?.click()
-                  }
+                  onClick={() => document.querySelector('[data-value="contact"]')?.click()}
                 >
                   Previous: Contact Information
                 </Button>
@@ -571,10 +472,7 @@ export default function NewMerchantPage() {
                   type="button"
                   onClick={() =>
                     form.trigger(["commission", "cashback"]).then((isValid) => {
-                      if (isValid)
-                        document
-                          .querySelector('[data-value="account"]')
-                          ?.click();
+                      if (isValid) document.querySelector('[data-value="account"]')?.click()
                     })
                   }
                 >
@@ -588,16 +486,13 @@ export default function NewMerchantPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>
-                    Create login credentials for the merchant
-                  </CardDescription>
+                  <CardDescription>Create login credentials for the merchant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center p-4 rounded-lg border bg-muted/50">
                     <Building className="h-5 w-5 mr-2 text-muted-foreground" />
                     <span className="text-sm">
-                      These credentials will be used by the merchant to access
-                      their dashboard
+                      These credentials will be used by the merchant to access their dashboard
                     </span>
                   </div>
 
@@ -610,9 +505,7 @@ export default function NewMerchantPage() {
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
-                        <FormDescription>
-                          The username for the merchant account
-                        </FormDescription>
+                        <FormDescription>The username for the merchant account</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -627,9 +520,7 @@ export default function NewMerchantPage() {
                         <FormControl>
                           <Input type="password" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Must be at least 8 characters
-                        </FormDescription>
+                        <FormDescription>Must be at least 8 characters</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -641,19 +532,11 @@ export default function NewMerchantPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Send credentials to merchant
-                          </FormLabel>
-                          <FormDescription>
-                            Automatically email the login credentials to the
-                            merchant
-                          </FormDescription>
+                          <FormLabel className="text-base">Send credentials to merchant</FormLabel>
+                          <FormDescription>Automatically email the login credentials to the merchant</FormDescription>
                         </div>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -663,11 +546,7 @@ export default function NewMerchantPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
-                      document
-                        .querySelector('[data-value="financial"]')
-                        ?.click()
-                    }
+                    onClick={() => document.querySelector('[data-value="financial"]')?.click()}
                   >
                     Previous: Financial Settings
                   </Button>
@@ -688,5 +567,5 @@ export default function NewMerchantPage() {
         </form>
       </Form>
     </div>
-  );
+  )
 }

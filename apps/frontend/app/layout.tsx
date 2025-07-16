@@ -1,19 +1,17 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Toaster } from "sonner";
 import "./globals.css"
-import { ThemeProvider } from "@/components/ThemeProvider"
-import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/context/auth-context"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Zeppex - Crypto Payment Processor",
   description: "Accept crypto payments in your physical and online stores",
-  icons: {
-    icon: "/favicon.ico",
-  },
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -22,27 +20,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className="light"
-      style={{ colorScheme: "light" }}
-    >
-      <body className={inter.className} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
         <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            disableTransitionOnChange
-            forcedTheme="light"
-            storageKey="theme"
-          >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             {children}
-            <Toaster position="top-right" />
+            <Toaster />
           </ThemeProvider>
         </AuthProvider>
       </body>
     </html>
-  );
+  )
 }

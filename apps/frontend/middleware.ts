@@ -1,88 +1,106 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse, type NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
-// Paths that should be protected by authentication
-const protectedPaths = [
-  "/admin/dashboard",
-  "/merchant/dashboard",
-];
+// Use the same JWT secret as the backend
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET ||
+    "your-super-secret-jwt-key-minimum-32-characters-long-change-this-in-production"
+);
 
-// Paths that are exceptions (e.g., login pages)
-const authPaths = ["/admin/login", "/merchant/login"];
+interface UserPayload {
+  sub: string;
+  role: "superadmin" | "admin" | "branch_admin" | "cashier";
+  email: string;
+}
 
-// Debug and test paths that should be excluded from middleware
-const excludedPaths = ["/auth-debug", "/auth-test", "/api/auth"];
+async function verifySession(token: string): Promise<UserPayload | null> {
+  try {
+    const { payload } = await jwtVerify<UserPayload>(token, JWT_SECRET);
+    return payload;
+  } catch (error) {
+    console.error("JWT verification failed:", error);
+    return null;
+  }
+}
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const path = request.nextUrl.pathname;
+  const sessionCookie = request.cookies.get("session")?.value;
 
-  // Skip middleware for debug routes and API routes
-  if (excludedPaths.some((path) => pathname.startsWith(path))) {
+  console.log("Middleware - Path:", path);
+  console.log("Middleware - Session cookie exists:", !!sessionCookie);
+
+  const isPublicRoute =
+    path === "/" ||
+    path.startsWith("/payment-order") ||
+    path.startsWith("/payment");
+  const isAuthRoute = path === "/admin/login" || path === "/merchant/login";
+
+  if (isAuthRoute) {
+    if (sessionCookie) {
+      console.log("Middleware - Auth route with session, verifying...");
+      const session = await verifySession(sessionCookie);
+      console.log("Middleware - Session verification result:", session);
+      if (session?.sub) {
+        // Both superadmin and admin should go to admin dashboard
+        const isAdminUser =
+          session.role === "superadmin" || session.role === "admin";
+        const dashboardUrl = isAdminUser
+          ? "/admin/dashboard"
+          : "/merchant/dashboard";
+        console.log("Middleware - Redirecting to:", dashboardUrl);
+        return NextResponse.redirect(new URL(dashboardUrl, request.url));
+      }
+    }
     return NextResponse.next();
   }
 
-  // Check if the current path is protected
-  const isPathProtected = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  );
-
-  // Check if current path is an auth path (login pages)
-  const isAuthPath = authPaths.some((path) => pathname.startsWith(path));
-
-  // Get auth token from NextAuth
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  const isAuthenticated = !!token;
-
-  // For debugging
-  console.log({
-    pathname,
-    isPathProtected,
-    isAuthPath,
-    isAuthenticated,
-    token: !!token,
-  });
-
-  // If the path is protected and the user is not authenticated, redirect to login
-  if (isPathProtected && !isAuthenticated) {
-    const returnUrl = request.nextUrl.pathname + request.nextUrl.search;
-    const loginPath = pathname.startsWith("/admin")
-      ? "/admin/login"
-      : "/merchant/login";
-
-    // Create url to redirect to
-    const redirectUrl = new URL(
-      `${loginPath}?returnUrl=${encodeURIComponent(returnUrl)}`,
-      request.url
-    );
-
-    return NextResponse.redirect(redirectUrl);
+  if (isPublicRoute) {
+    return NextResponse.next();
   }
 
-  // If the user is authenticated and trying to access a login page, redirect to dashboard
-  if (isAuthPath && isAuthenticated) {
-    const dashboardPath = pathname.startsWith("/admin")
-      ? "/admin/dashboard"
-      : "/merchant/dashboard";
-    const redirectUrl = new URL(dashboardPath, request.url);
+  if (!sessionCookie) {
+    const loginUrl = path.startsWith("/admin")
+      ? "/admin/login"
+      : "/merchant/login";
+    return NextResponse.redirect(new URL(loginUrl, request.url));
+  }
 
-    return NextResponse.redirect(redirectUrl);
+  const session = await verifySession(sessionCookie);
+
+  if (!session?.sub) {
+    const loginUrl = path.startsWith("/admin")
+      ? "/admin/login"
+      : "/merchant/login";
+    const response = NextResponse.redirect(new URL(loginUrl, request.url));
+    response.cookies.set("session", "", { expires: new Date(0), path: "/" });
+    return response;
+  }
+
+  const isProtectedAdmin = path.startsWith("/admin/dashboard");
+  const isProtectedMerchant = path.startsWith("/merchant/dashboard");
+
+  if (
+    isProtectedAdmin &&
+    session.role !== "superadmin" &&
+    session.role !== "admin"
+  ) {
+    return NextResponse.redirect(new URL("/merchant/dashboard", request.url));
+  }
+
+  if (
+    isProtectedMerchant &&
+    session.role !== "branch_admin" &&
+    session.role !== "cashier"
+  ) {
+    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 
   return NextResponse.next();
 }
 
-// Configure the middleware to run on specific paths
 export const config = {
   matcher: [
-    // Protected paths - ensure all protected paths are properly matched
-    "/admin/:path*", // This will protect all admin routes, including dashboard and tenants
-    "/merchant/:path*",
-
-    // Exclude specific paths that shouldn't be protected (if needed)
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|crypto-qr-code-scan.png).*)",
   ],
 };

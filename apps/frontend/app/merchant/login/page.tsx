@@ -5,52 +5,29 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { login } from "@/lib/auth";
-import { UserRole } from "@/types/enums";
+import { useAuth } from "@/context/auth-context"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 export default function MerchantLogin() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const { login, isLoading } = useAuth()
+  const [email, setEmail] = useState("john_doe@starbucks.com")
+  const [password, setPassword] = useState("password123")
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError("");
-    
+    setError(null)
     try {
-      const response = await login({ email, password });
-
-      // Check if user has merchant privileges
-      if (
-        response.user.role === UserRole.TENANT_ADMIN ||
-        response.user.role === UserRole.MERCHANT_ADMIN ||
-        response.user.role === UserRole.BRANCH_ADMIN
-      ) {
-        toast.success("Login successful");
-        router.push("/merchant/dashboard");
-      } else {
-        setError("You don't have merchant access privileges");
-        toast.error("Access denied. Insufficient privileges.");
-        // Clear the stored credentials if role doesn't match
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-      }
-    } catch (error: unknown) {
-      console.error("Login error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Invalid credentials";
-      setError(errorMessage);
-      toast.error("Login failed. Please check your credentials.");
-    } finally {
-      setIsLoading(false);
+      await login(email, password)
+      router.push("/merchant/dashboard")
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
@@ -70,6 +47,13 @@ export default function MerchantLogin() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Login Failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -82,15 +66,7 @@ export default function MerchantLogin() {
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/merchant/forgot-password"
-                  className="text-sm text-primary underline-offset-4 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -99,7 +75,6 @@ export default function MerchantLogin() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            {error && <div className="text-red-500 text-sm pt-1">{error}</div>}
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button className="w-full" type="submit" disabled={isLoading}>
@@ -107,10 +82,7 @@ export default function MerchantLogin() {
             </Button>
             <p className="mt-4 text-center text-sm text-gray-500">
               Don&apos;t have an account?{" "}
-              <Link
-                href="/merchant/register"
-                className="text-primary underline-offset-4 hover:underline"
-              >
+              <Link href="/merchant/register" className="text-primary underline-offset-4 hover:underline">
                 Contact Zeppex
               </Link>
             </p>
@@ -118,5 +90,5 @@ export default function MerchantLogin() {
         </form>
       </Card>
     </div>
-  );
+  )
 }

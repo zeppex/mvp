@@ -1,21 +1,18 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { BarChart3, CreditCard, Home, LogOut, QrCode, Settings, User, Wallet } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
+  SidebarProvider,
   Sidebar,
+  SidebarHeader,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
+  SidebarInset,
   SidebarTrigger,
+  SidebarGroup,
+  SidebarMenuButton,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 export default function MerchantDashboardLayout({
   children,
@@ -26,109 +23,79 @@ export default function MerchantDashboardLayout({
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar>
-          <SidebarHeader className="border-b">
-            <div className="flex items-center px-2 py-2">
-              <Link href="/" className="flex items-center gap-2 font-semibold">
-                <span className="text-xl font-bold">Zeppex</span>
-              </Link>
-            </div>
+          <SidebarHeader>
+            <Link href="/" className="flex items-center gap-2 font-semibold">
+              <span className="text-xl font-bold">Zeppex</span>
+            </Link>
           </SidebarHeader>
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard">
-                        <Home className="h-4 w-4" />
-                        <span>Overview</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/pos">
-                        <QrCode className="h-4 w-4" />
-                        <span>Point of Sale</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/transactions">
-                        <CreditCard className="h-4 w-4" />
-                        <span>Transactions</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/balance">
-                        <Wallet className="h-4 w-4" />
-                        <span>Balance</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/analytics">
-                        <BarChart3 className="h-4 w-4" />
-                        <span>Analytics</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
+            <SidebarGroup label="Dashboard">
+              <SidebarMenuButton asChild tooltip="Overview">
+                <Link href="/merchant/dashboard">
+                  <Home />
+                  <span>Overview</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuButton asChild tooltip="Point of Sale">
+                <Link href="/merchant/dashboard/pos">
+                  <QrCode />
+                  <span>Point of Sale</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuButton asChild tooltip="Transactions">
+                <Link href="/merchant/dashboard/transactions">
+                  <CreditCard />
+                  <span>Transactions</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuButton asChild tooltip="Balance">
+                <Link href="/merchant/dashboard/balance">
+                  <Wallet />
+                  <span>Balance</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuButton asChild tooltip="Analytics">
+                <Link href="/merchant/dashboard/analytics">
+                  <BarChart3 />
+                  <span>Analytics</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>Account</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/profile">
-                        <User className="h-4 w-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href="/merchant/dashboard/settings">
-                        <Settings className="h-4 w-4" />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
+            <SidebarGroup label="Account">
+              <SidebarMenuButton asChild tooltip="Profile">
+                <Link href="/merchant/dashboard/profile">
+                  <User />
+                  <span>Profile</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuButton asChild tooltip="Settings">
+                <Link href="/merchant/dashboard/settings">
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter className="border-t p-4">
-            <Button variant="outline" className="w-full justify-start" asChild>
+          <SidebarFooter>
+            <SidebarMenuButton asChild tooltip="Sign Out">
               <Link href="/">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                <LogOut />
+                <span>Sign Out</span>
               </Link>
-            </Button>
+            </SidebarMenuButton>
           </SidebarFooter>
         </Sidebar>
-        <div className="flex-1">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
+        <SidebarInset>
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
             <SidebarTrigger />
-            <div className="flex-1">
-              <h1 className="text-lg font-semibold">Merchant Dashboard</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <User className="mr-2 h-4 w-4" />
-                Starbucks - Unicenter 2
-              </Button>
-            </div>
+            <h1 className="text-lg font-semibold flex-1">Merchant Dashboard</h1>
+            <Button variant="outline" size="sm">
+              <User className="mr-2 h-4 w-4" />
+              Starbucks - Unicenter 2
+            </Button>
           </header>
-          <main className="flex-1 p-4 md:p-6">{children}</main>
-        </div>
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   )
