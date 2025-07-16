@@ -1,9 +1,16 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,82 +18,160 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, CheckCircle2, MoreHorizontal, Plus, Search, UserX } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  MoreHorizontal,
+  Plus,
+  Search,
+  UserX,
+  Loader2,
+} from "lucide-react";
 
-// Mock merchant data (find by ID)
-const merchants = [
-  {
-    id: "M001",
-    name: "Starbucks",
-    branch: "Unicenter 2",
-  },
-  {
-    id: "M002",
-    name: "Howtradethat",
-    branch: "Main Branch",
-  },
-]
+interface Merchant {
+  id: string;
+  name: string;
+  address: string;
+  contact: string;
+  contactName: string;
+  contactPhone: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  branches?: any[];
+}
 
-// Mock user data for a merchant
-const users = [
-  {
-    id: "U001",
-    name: "John Doe",
-    email: "john_doe@starbucks.com",
-    role: "Manager",
-    status: "active",
-    createdAt: "2025-01-15T10:05:00",
-    merchantId: "M001",
-  },
-  {
-    id: "U002",
-    name: "Jane Smith",
-    email: "jane_smith@starbucks.com",
-    role: "Cashier",
-    status: "active",
-    createdAt: "2025-01-16T11:30:00",
-    merchantId: "M001",
-  },
-  {
-    id: "U003",
-    name: "Peter Jones",
-    email: "peter_jones@starbucks.com",
-    role: "Cashier",
-    status: "inactive",
-    createdAt: "2025-02-01T09:00:00",
-    merchantId: "M001",
-  },
-]
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "superadmin" | "admin" | "branch_admin" | "cashier";
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  merchant?: Merchant;
+  branch?: any;
+  pos?: any;
+}
 
-export default function MerchantUsersPage({ params }: { params: { merchantId: string } }) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const merchant = merchants.find((m) => m.id === params.merchantId)
-  const merchantUsers = users.filter((u) => u.merchantId === params.merchantId)
+export default function MerchantUsersPage() {
+  const params = useParams();
+  const merchantId = params.merchantId as string;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredUsers = merchantUsers.filter(
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch merchant data
+        const merchantResponse = await fetch(`/api/merchants/${merchantId}`);
+        if (!merchantResponse.ok) {
+          throw new Error("Failed to fetch merchant");
+        }
+        const merchantData = await merchantResponse.json();
+        setMerchant(merchantData);
+
+        // Fetch users for this merchant
+        const usersResponse = await fetch(
+          `/api/users?merchantId=${merchantId}`
+        );
+        if (!usersResponse.ok) {
+          throw new Error("Failed to fetch users");
+        }
+        const usersData = await usersResponse.json();
+        setUsers(usersData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (merchantId) {
+      fetchData();
+    }
+  }, [merchantId]);
+
+  const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+      `${user.firstName} ${user.lastName}`
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString()
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case "superadmin":
+        return "Super Admin";
+      case "admin":
+        return "Admin";
+      case "branch_admin":
+        return "Branch Admin";
+      case "cashier":
+        return "Cashier";
+      default:
+        return role;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/admin/dashboard/merchants">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Loading users...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  if (!merchant) {
+  if (error || !merchant) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <h2 className="text-2xl font-bold">Merchant not found</h2>
-        <p className="text-muted-foreground">The requested merchant could not be found.</p>
+        <p className="text-muted-foreground">
+          {error || "The requested merchant could not be found."}
+        </p>
         <Button asChild className="mt-4">
           <Link href="/admin/dashboard/merchants">Return to Merchants</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -100,7 +185,7 @@ export default function MerchantUsersPage({ params }: { params: { merchantId: st
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Manage Users</h2>
           <p className="text-muted-foreground">
-            Add, view, and manage users for {merchant.name} - {merchant.branch}
+            Add, view, and manage users for {merchant.name}
           </p>
         </div>
       </div>
@@ -110,10 +195,14 @@ export default function MerchantUsersPage({ params }: { params: { merchantId: st
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle>User List</CardTitle>
-              <CardDescription>A list of all users associated with this merchant.</CardDescription>
+              <CardDescription>
+                A list of all users associated with this merchant.
+              </CardDescription>
             </div>
             <Button asChild>
-              <Link href={`/admin/dashboard/merchants/${merchant.id}/users/new`}>
+              <Link
+                href={`/admin/dashboard/merchants/${merchant.id}/users/new`}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New User
               </Link>
@@ -149,23 +238,29 @@ export default function MerchantUsersPage({ params }: { params: { merchantId: st
                 {filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-4">
-                      No users found for this merchant
+                      {users.length === 0
+                        ? "No users found for this merchant"
+                        : "No users match your search"}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {user.firstName} {user.lastName}
+                      </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
+                      <TableCell>{getRoleDisplayName(user.role)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {user.status === "active" ? (
+                          {user.isActive ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           ) : (
                             <UserX className="h-4 w-4 text-red-500" />
                           )}
-                          <span className="capitalize">{user.status}</span>
+                          <span className="capitalize">
+                            {user.isActive ? "Active" : "Inactive"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(user.createdAt)}</TableCell>
@@ -182,7 +277,11 @@ export default function MerchantUsersPage({ params }: { params: { merchantId: st
                             <DropdownMenuItem>Edit User</DropdownMenuItem>
                             <DropdownMenuItem>Reset Password</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">Deactivate User</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              {user.isActive
+                                ? "Deactivate User"
+                                : "Activate User"}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -195,5 +294,5 @@ export default function MerchantUsersPage({ params }: { params: { merchantId: st
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

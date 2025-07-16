@@ -1,52 +1,105 @@
-import { NextResponse } from "next/server"
-import * as z from "zod"
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-// --- Mock Database ---
-// In a real app, you'd import your database client here.
-const mockUsers: any[] = []
-// ---
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
-// Zod schema for server-side validation
-const userCreationSchema = z.object({
-  merchantId: z.string().uuid({ message: "Invalid merchant ID." }),
-  name: z.string().min(2, { message: "Full name must be at least 2 characters." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  role: z.enum(["Cashier", "Manager", "Viewer"]),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-})
+export async function GET(request: Request) {
+  const session = cookies().get("session")?.value;
+
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const merchantId = searchParams.get("merchantId");
+    const branchId = searchParams.get("branchId");
+
+    let url = `${BACKEND_URL}/api/v1/admin/users`;
+    const params = new URLSearchParams();
+
+    if (merchantId) {
+      params.append("merchantId", merchantId);
+    }
+    if (branchId) {
+      params.append("branchId", branchId);
+    }
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const apiRes = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${session}`,
+      },
+    });
+
+    if (!apiRes.ok) {
+      const errorData = await apiRes.json();
+      return NextResponse.json(
+        { message: errorData.message || "Failed to fetch users" },
+        { status: apiRes.status }
+      );
+    }
+
+    const users = await apiRes.json();
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Fetch users error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
+  const session = cookies().get("session")?.value;
+
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const json = await request.json()
-    const data = userCreationSchema.parse(json)
+    const body = await request.json();
 
-    // Simulate checking for a duplicate email in the database
-    if (mockUsers.some((user) => user.email === data.email)) {
-      return NextResponse.json({ message: "A user with this email already exists." }, { status: 409 }) // 409 Conflict
+    // Transform frontend form data to match backend CreateUserDto
+    const userData = {
+      email: body.email,
+      password: body.password,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      role: body.role,
+      merchantId: body.merchantId,
+      branchId: body.branchId,
+      posId: body.posId,
+    };
+
+    const apiRes = await fetch(`${BACKEND_URL}/api/v1/admin/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session}`,
+      },
+      body: JSON.stringify(userData),
+    });
+
+    if (!apiRes.ok) {
+      const errorData = await apiRes.json();
+      return NextResponse.json(
+        { message: errorData.message || "Failed to create user" },
+        { status: apiRes.status }
+      );
     }
 
-    // Simulate creating the user in the database
-    const newUser = {
-      id: `U${String(mockUsers.length + 1).padStart(3, "0")}`,
-      ...data,
-      status: "active",
-      createdAt: new Date().toISOString(),
-    }
-    // Don't store the plain password
-    delete (newUser as any).password
-    mockUsers.push(newUser)
-
-    console.log("New user created:", newUser)
-    console.log("All users:", mockUsers)
-
-    // In a real app, you would also trigger an email to be sent here if `sendCredentials` was true.
-
-    return NextResponse.json(newUser, { status: 201 }) // 201 Created
+    const user = await apiRes.json();
+    return NextResponse.json(user, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ errors: error.flatten().fieldErrors }, { status: 400 }) // 400 Bad Request
-    }
-    // Generic server error
-    return NextResponse.json({ message: "An unexpected error occurred." }, { status: 500 })
+    console.error("Create user error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
