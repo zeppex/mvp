@@ -6,7 +6,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 export async function POST(request: NextRequest) {
   try {
     // Get JWT token from cookies
-    const session = cookies().get("session")?.value;
+    const session = (await cookies()).get("session")?.value;
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

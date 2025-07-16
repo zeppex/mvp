@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET() {
-  const session = cookies().get("session")?.value;
+  const session = (await cookies()).get("session")?.value;
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

@@ -35,23 +35,47 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 // Form validation schema matching backend CreateUserDto
-const userFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters." }),
-  firstName: z
-    .string()
-    .min(2, { message: "First name must be at least 2 characters." }),
-  lastName: z
-    .string()
-    .min(2, { message: "Last name must be at least 2 characters." }),
-  role: z.enum(["admin", "branch_admin", "cashier"], {
-    message: "Please select a valid role.",
-  }),
-  branchId: z.string().optional(),
-  posId: z.string().optional(),
-});
+const userFormSchema = z
+  .object({
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    password: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters." }),
+    firstName: z
+      .string()
+      .min(2, { message: "First name must be at least 2 characters." }),
+    lastName: z
+      .string()
+      .min(2, { message: "Last name must be at least 2 characters." }),
+    role: z.enum(["admin", "branch_admin", "cashier"], {
+      message: "Please select a valid role.",
+    }),
+    branchId: z.string().optional(),
+    posId: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // For branch_admin and cashier roles, branchId is required
+      if (
+        (data.role === "branch_admin" || data.role === "cashier") &&
+        (!data.branchId || data.branchId.trim() === "")
+      ) {
+        return false;
+      }
+      // For cashier role, posId is required
+      if (
+        data.role === "cashier" &&
+        (!data.posId || data.posId.trim() === "")
+      ) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Branch and POS selection are required for this role",
+      path: ["branchId"], // This will show the error on the branchId field
+    }
+  );
 
 type UserFormValues = z.infer<typeof userFormSchema>;
 
@@ -120,15 +144,36 @@ export default function NewUserPage() {
     setError(null);
 
     try {
+      // Prepare the user data, only including branchId and posId if they have values
+      const userData: any = {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        merchantId,
+      };
+
+      // Only include branchId if it has a value and role requires it
+      if (
+        data.branchId &&
+        data.branchId.trim() !== "" &&
+        (data.role === "branch_admin" || data.role === "cashier")
+      ) {
+        userData.branchId = data.branchId;
+      }
+
+      // Only include posId if it has a value and role is cashier
+      if (data.posId && data.posId.trim() !== "" && data.role === "cashier") {
+        userData.posId = data.posId;
+      }
+
       const response = await fetch("/api/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...data,
-          merchantId,
-        }),
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {

@@ -5,9 +5,10 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(
   request: Request,
-  { params }: { params: { merchantId: string } }
+  { params }: { params: Promise<{ merchantId: string }> }
 ) {
-  const session = cookies().get("session")?.value;
+  const resolvedParams = await params;
+  const session = (await cookies()).get("session")?.value;
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -15,7 +16,7 @@ export async function GET(
 
   try {
     const apiRes = await fetch(
-      `${BACKEND_URL}/api/v1/merchants/${params.merchantId}`,
+      `${BACKEND_URL}/api/v1/merchants/${resolvedParams.merchantId}`,
       {
         headers: {
           Authorization: `Bearer ${session}`,

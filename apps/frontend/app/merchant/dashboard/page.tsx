@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowDownIcon, ArrowUpIcon, CheckCircle2, Clock, DollarSign, XCircle } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, CheckCircle2, Clock, DollarSign, XCircle, Users, Building2, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -9,8 +9,12 @@ export default function MerchantDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Welcome back, John</h2>
-          <p className="text-muted-foreground">Here&apos;s an overview of your payment activity</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Welcome back, John
+          </h2>
+          <p className="text-muted-foreground">
+            Here&apos;s an overview of your payment activity
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild>
@@ -23,27 +27,36 @@ export default function MerchantDashboard() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="administration">Administration</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Balance
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">$4,231.89</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                <p className="text-xs text-muted-foreground">
+                  +20.1% from last month
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today&apos;s Sales</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Today&apos;s Sales
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">$652.00</div>
-                <p className="text-xs text-muted-foreground">12 transactions today</p>
+                <p className="text-xs text-muted-foreground">
+                  12 transactions today
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -53,7 +66,9 @@ export default function MerchantDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">42</div>
-                <p className="text-xs text-muted-foreground">+19% from last week</p>
+                <p className="text-xs text-muted-foreground">
+                  +19% from last week
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -63,7 +78,9 @@ export default function MerchantDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">3</div>
-                <p className="text-xs text-muted-foreground">2 awaiting confirmation</p>
+                <p className="text-xs text-muted-foreground">
+                  2 awaiting confirmation
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -71,7 +88,9 @@ export default function MerchantDashboard() {
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Recent Transactions</CardTitle>
-                <CardDescription>Your most recent payment activity</CardDescription>
+                <CardDescription>
+                  Your most recent payment activity
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -80,15 +99,21 @@ export default function MerchantDashboard() {
                       <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">Payment Received</p>
-                      <p className="text-sm text-muted-foreground">2 Venti Lattes - $10.00</p>
+                      <p className="text-sm font-medium leading-none">
+                        Payment Received
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        2 Venti Lattes - $10.00
+                      </p>
                     </div>
                     <div className="ml-auto font-medium">
                       <div className="flex items-center">
                         <ArrowUpIcon className="mr-1 h-4 w-4 text-green-500" />
                         $10.00
                       </div>
-                      <div className="text-xs text-muted-foreground">5 minutes ago</div>
+                      <div className="text-xs text-muted-foreground">
+                        5 minutes ago
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -96,15 +121,21 @@ export default function MerchantDashboard() {
                       <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">Payment Received</p>
-                      <p className="text-sm text-muted-foreground">Cappuccino - $4.50</p>
+                      <p className="text-sm font-medium leading-none">
+                        Payment Received
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Cappuccino - $4.50
+                      </p>
                     </div>
                     <div className="ml-auto font-medium">
                       <div className="flex items-center">
                         <ArrowUpIcon className="mr-1 h-4 w-4 text-green-500" />
                         $4.50
                       </div>
-                      <div className="text-xs text-muted-foreground">20 minutes ago</div>
+                      <div className="text-xs text-muted-foreground">
+                        20 minutes ago
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -112,15 +143,21 @@ export default function MerchantDashboard() {
                       <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">Payment Pending</p>
-                      <p className="text-sm text-muted-foreground">Mocha Frappuccino - $6.75</p>
+                      <p className="text-sm font-medium leading-none">
+                        Payment Pending
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Mocha Frappuccino - $6.75
+                      </p>
                     </div>
                     <div className="ml-auto font-medium">
                       <div className="flex items-center">
                         <Clock className="mr-1 h-4 w-4 text-amber-500" />
                         $6.75
                       </div>
-                      <div className="text-xs text-muted-foreground">35 minutes ago</div>
+                      <div className="text-xs text-muted-foreground">
+                        35 minutes ago
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -128,15 +165,21 @@ export default function MerchantDashboard() {
                       <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">Payment Failed</p>
-                      <p className="text-sm text-muted-foreground">Iced Coffee - $3.25</p>
+                      <p className="text-sm font-medium leading-none">
+                        Payment Failed
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Iced Coffee - $3.25
+                      </p>
                     </div>
                     <div className="ml-auto font-medium">
                       <div className="flex items-center">
                         <XCircle className="mr-1 h-4 w-4 text-red-500" />
                         $3.25
                       </div>
-                      <div className="text-xs text-muted-foreground">1 hour ago</div>
+                      <div className="text-xs text-muted-foreground">
+                        1 hour ago
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -144,21 +187,29 @@ export default function MerchantDashboard() {
                       <ArrowDownIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">Refund Issued</p>
-                      <p className="text-sm text-muted-foreground">Chai Latte - $5.25</p>
+                      <p className="text-sm font-medium leading-none">
+                        Refund Issued
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Chai Latte - $5.25
+                      </p>
                     </div>
                     <div className="ml-auto font-medium">
                       <div className="flex items-center">
                         <ArrowDownIcon className="mr-1 h-4 w-4 text-red-500" />
                         $5.25
                       </div>
-                      <div className="text-xs text-muted-foreground">2 hours ago</div>
+                      <div className="text-xs text-muted-foreground">
+                        2 hours ago
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-center">
                   <Button variant="outline" asChild>
-                    <Link href="/merchant/dashboard/transactions">View All Transactions</Link>
+                    <Link href="/merchant/dashboard/transactions">
+                      View All Transactions
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -166,7 +217,9 @@ export default function MerchantDashboard() {
             <Card className="col-span-3">
               <CardHeader>
                 <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Distribution of payment methods used</CardDescription>
+                <CardDescription>
+                  Distribution of payment methods used
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -178,7 +231,10 @@ export default function MerchantDashboard() {
                     <span className="text-sm font-medium">68%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div className="h-2 rounded-full bg-blue-500" style={{ width: "68%" }}></div>
+                    <div
+                      className="h-2 rounded-full bg-blue-500"
+                      style={{ width: "68%" }}
+                    ></div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -188,7 +244,10 @@ export default function MerchantDashboard() {
                     <span className="text-sm font-medium">22%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div className="h-2 rounded-full bg-green-500" style={{ width: "22%" }}></div>
+                    <div
+                      className="h-2 rounded-full bg-green-500"
+                      style={{ width: "22%" }}
+                    ></div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -198,7 +257,10 @@ export default function MerchantDashboard() {
                     <span className="text-sm font-medium">10%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div className="h-2 rounded-full bg-purple-500" style={{ width: "10%" }}></div>
+                    <div
+                      className="h-2 rounded-full bg-purple-500"
+                      style={{ width: "10%" }}
+                    ></div>
                   </div>
                 </div>
               </CardContent>
@@ -209,7 +271,9 @@ export default function MerchantDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Analytics</CardTitle>
-              <CardDescription>Detailed analytics will be displayed here</CardDescription>
+              <CardDescription>
+                Detailed analytics will be displayed here
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <p>Analytics content coming soon...</p>
@@ -227,7 +291,81 @@ export default function MerchantDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="administration" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Users Management
+                </CardTitle>
+                <CardDescription>
+                  Manage your merchant users and their permissions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Create, edit, and manage user accounts with different roles
+                    and permissions.
+                  </p>
+                  <Button asChild className="w-full">
+                    <Link href="/merchant/dashboard/users">Manage Users</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Branches Management
+                </CardTitle>
+                <CardDescription>
+                  Manage your merchant branches and locations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Add new branches, update locations, and manage
+                    branch-specific settings.
+                  </p>
+                  <Button asChild className="w-full">
+                    <Link href="/merchant/dashboard/branches">
+                      Manage Branches
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5" />
+                  POS Terminals
+                </CardTitle>
+                <CardDescription>
+                  Manage your point of sale terminals
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Create and manage POS terminals, view payment links, and
+                    track performance.
+                  </p>
+                  <Button asChild className="w-full">
+                    <Link href="/merchant/dashboard/pos-terminals">
+                      Manage POS Terminals
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

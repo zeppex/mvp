@@ -42,10 +42,10 @@ export async function middleware(request: NextRequest) {
       const session = await verifySession(sessionCookie);
       console.log("Middleware - Session verification result:", session);
       if (session?.sub) {
-        // Both superadmin and admin should go to admin dashboard
-        const isAdminUser =
-          session.role === "superadmin" || session.role === "admin";
-        const dashboardUrl = isAdminUser
+        // Only superadmin should go to admin dashboard
+        // admin, branch_admin, and cashier should go to merchant dashboard
+        const isSuperAdmin = session.role === "superadmin";
+        const dashboardUrl = isSuperAdmin
           ? "/admin/dashboard"
           : "/merchant/dashboard";
         console.log("Middleware - Redirecting to:", dashboardUrl);
@@ -82,14 +82,14 @@ export async function middleware(request: NextRequest) {
 
   if (
     isProtectedAdmin &&
-    session.role !== "superadmin" &&
-    session.role !== "admin"
+    session.role !== "superadmin"
   ) {
     return NextResponse.redirect(new URL("/merchant/dashboard", request.url));
   }
 
   if (
     isProtectedMerchant &&
+    session.role !== "admin" &&
     session.role !== "branch_admin" &&
     session.role !== "cashier"
   ) {

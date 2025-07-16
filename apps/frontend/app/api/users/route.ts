@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(request: Request) {
-  const session = cookies().get("session")?.value;
+  const session = (await cookies()).get("session")?.value;
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = cookies().get("session")?.value;
+  const session = (await cookies()).get("session")?.value;
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -65,16 +65,23 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // Transform frontend form data to match backend CreateUserDto
-    const userData = {
+    const userData: any = {
       email: body.email,
       password: body.password,
       firstName: body.firstName,
       lastName: body.lastName,
       role: body.role,
       merchantId: body.merchantId,
-      branchId: body.branchId,
-      posId: body.posId,
     };
+
+    // Only include branchId and posId if they have valid UUID values
+    if (body.branchId && body.branchId.trim() !== "") {
+      userData.branchId = body.branchId;
+    }
+
+    if (body.posId && body.posId.trim() !== "") {
+      userData.posId = body.posId;
+    }
 
     const apiRes = await fetch(`${BACKEND_URL}/api/v1/admin/users`, {
       method: "POST",

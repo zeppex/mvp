@@ -24,8 +24,10 @@ export default function MerchantLogin() {
     e.preventDefault()
     setError(null)
     try {
-      await login(email, password)
-      router.push("/merchant/dashboard")
+      await login(email, password);
+      // The middleware will handle the redirect based on user role
+      // For merchant users (admin, branch_admin, cashier), it will redirect to /merchant/dashboard
+      // For superadmin, it will redirect to /admin/dashboard
     } catch (err: any) {
       setError(err.message)
     }
