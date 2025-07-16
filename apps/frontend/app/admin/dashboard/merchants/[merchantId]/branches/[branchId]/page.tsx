@@ -12,65 +12,55 @@ import {
 import {
   Building,
   MapPin,
-  Mail,
   Phone,
-  Users,
-  Calendar,
+  User,
+  ArrowLeft,
+  Plus,
   CheckCircle2,
   Clock,
-  ArrowLeft,
-  Edit,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-interface Merchant {
+interface Branch {
   id: string;
   name: string;
   address: string;
-  contact: string;
   contactName: string;
   contactPhone: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  branches?: Array<{
+  pos?: Array<{
     id: string;
     name: string;
-    address: string;
-    contactName: string;
-    contactPhone: string;
+    description: string;
     isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-    pos?: Array<{
-      id: string;
-      name: string;
-      description: string;
-      isActive: boolean;
-    }>;
   }>;
 }
 
-export default function MerchantDetailPage() {
+export default function BranchDetailPage() {
   const params = useParams();
   const merchantId = params.merchantId as string;
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const branchId = params.branchId as string;
+  const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMerchant = async () => {
+    const fetchBranch = async () => {
       try {
-        const response = await fetch(`/api/merchants/${merchantId}`);
+        const response = await fetch(
+          `/api/branches/${branchId}?merchantId=${merchantId}`
+        );
         if (!response.ok) {
-          throw new Error("Failed to fetch merchant");
+          throw new Error("Failed to fetch branch");
         }
         const data = await response.json();
-        console.log("Merchant data received:", data);
-        setMerchant(data);
+        setBranch(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -78,19 +68,17 @@ export default function MerchantDetailPage() {
       }
     };
 
-    if (merchantId) {
-      fetchMerchant();
+    if (branchId && merchantId) {
+      fetchBranch();
     }
-  }, [merchantId]);
+  }, [branchId, merchantId]);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" asChild>
-            <Link href="/admin/dashboard/merchants">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+          <Button variant="outline" size="icon" disabled>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -98,23 +86,21 @@ export default function MerchantDetailPage() {
     );
   }
 
-  if (error || !merchant) {
+  if (error || !branch) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href="/admin/dashboard/merchants">
+            <Link href={`/admin/dashboard/merchants/${merchantId}`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Merchant Details
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Branch Details</h2>
         </div>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">
-              {error || "Merchant not found"}
+              {error || "Branch not found"}
             </p>
           </CardContent>
         </Card>
@@ -128,32 +114,24 @@ export default function MerchantDetailPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href="/admin/dashboard/merchants">
+            <Link href={`/admin/dashboard/merchants/${merchantId}`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">
-              {merchant.name}
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight">{branch.name}</h2>
             <p className="text-muted-foreground">
-              Merchant details and statistics
+              Branch details and POS terminals
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
+          <Button asChild>
             <Link
-              href={`/admin/dashboard/merchants/${merchantId}/branches/new`}
+              href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/new`}
             >
-              <Building className="mr-2 h-4 w-4" />
-              Add Branch
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href={`/admin/dashboard/merchants/${merchantId}/users`}>
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
+              <Plus className="mr-2 h-4 w-4" />
+              Add POS Terminal
             </Link>
           </Button>
         </div>
@@ -161,8 +139,8 @@ export default function MerchantDetailPage() {
 
       {/* Status Badge */}
       <div className="flex items-center gap-2">
-        <Badge variant={merchant.isActive ? "default" : "secondary"}>
-          {merchant.isActive ? (
+        <Badge variant={branch.isActive ? "default" : "secondary"}>
+          {branch.isActive ? (
             <>
               <CheckCircle2 className="mr-1 h-3 w-3" />
               Active
@@ -175,7 +153,7 @@ export default function MerchantDetailPage() {
           )}
         </Badge>
         <span className="text-sm text-muted-foreground">
-          Merchant ID: {merchant.id}
+          Branch ID: {branch.id}
         </span>
       </div>
 
@@ -184,28 +162,15 @@ export default function MerchantDetailPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Branches
+              Total POS Terminals
             </CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {merchant.branches?.length || 0}
-            </div>
+            <div className="text-2xl font-bold">{branch.pos?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {merchant.branches?.filter((b: any) => b.isActive).length || 0}{" "}
-              active
+              {branch.pos?.filter((p) => p.isActive).length || 0} active
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No users yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -213,7 +178,7 @@ export default function MerchantDetailPage() {
             <CardTitle className="text-sm font-medium">
               Total Transactions
             </CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
@@ -223,21 +188,31 @@ export default function MerchantDetailPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">$0.00</div>
             <p className="text-xs text-muted-foreground">No volume yet</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">-</div>
+            <p className="text-xs text-muted-foreground">No recent activity</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Merchant Information */}
+        {/* Branch Information */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Merchant Information</CardTitle>
+            <CardTitle>Branch Information</CardTitle>
             <CardDescription>
               Basic details and contact information
             </CardDescription>
@@ -247,9 +222,9 @@ export default function MerchantDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Building className="h-4 w-4 text-muted-foreground" />
-                  Business Name
+                  Branch Name
                 </div>
-                <p className="text-sm text-muted-foreground">{merchant.name}</p>
+                <p className="text-sm text-muted-foreground">{branch.name}</p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
@@ -257,7 +232,7 @@ export default function MerchantDetailPage() {
                   Address
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {merchant.address}
+                  {branch.address}
                 </p>
               </div>
             </div>
@@ -267,32 +242,22 @@ export default function MerchantDetailPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <User className="h-4 w-4 text-muted-foreground" />
                   Contact Person
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {merchant.contactName}
+                  {branch.contactName}
                 </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  Contact Email
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  Contact Phone
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {merchant.contact}
+                  {branch.contactPhone}
                 </p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                Contact Phone
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {merchant.contactPhone}
-              </p>
             </div>
 
             <Separator />
@@ -300,64 +265,65 @@ export default function MerchantDetailPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   Created
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(merchant.createdAt).toLocaleDateString()}
+                  {new Date(branch.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   Last Updated
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(merchant.updatedAt).toLocaleDateString()}
+                  {new Date(branch.updatedAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Branches */}
+        {/* POS Terminals */}
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Branches</CardTitle>
-            <CardDescription>Merchant locations and branches</CardDescription>
+            <CardTitle>POS Terminals</CardTitle>
+            <CardDescription>Payment terminals at this branch</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {merchant.branches && merchant.branches.length > 0 ? (
-              merchant.branches.map((branch: any) => (
+            {branch.pos && branch.pos.length > 0 ? (
+              branch.pos.map((pos) => (
                 <div
-                  key={branch.id}
+                  key={pos.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() =>
-                    (window.location.href = `/admin/dashboard/merchants/${merchantId}/branches/${branch.id}`)
-                  }
+                  onClick={() => {
+                    // Future: Navigate to POS detail page
+                    // window.location.href = `/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`;
+                  }}
                 >
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{branch.name}</p>
+                    <p className="text-sm font-medium">{pos.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {branch.address}
+                      {pos.description}
                     </p>
                   </div>
-                  <Badge variant={branch.isActive ? "default" : "secondary"}>
-                    {branch.isActive ? "Active" : "Inactive"}
+                  <Badge variant={pos.isActive ? "default" : "secondary"}>
+                    {pos.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
               ))
             ) : (
               <div className="text-center py-8">
-                <Building className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <CreditCard className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  No branches found
+                  No POS terminals found
                 </p>
                 <Button variant="outline" size="sm" className="mt-2" asChild>
                   <Link
-                    href={`/admin/dashboard/merchants/${merchantId}/branches/new`}
+                    href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/new`}
                   >
-                    Add Branch
+                    Add POS Terminal
                   </Link>
                 </Button>
               </div>

@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 interface User {
   id: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  role: "admin" | "merchant";
+  role: "admin" | "superadmin" | "merchant" | "branch_admin" | "cashier";
 }
 
 interface AuthContextType {
@@ -22,7 +23,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user is already logged in on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);

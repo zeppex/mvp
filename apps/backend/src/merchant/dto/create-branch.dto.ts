@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, Length, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  Length,
+  Matches,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBranchDto {
@@ -52,4 +59,13 @@ export class CreateBranchDto {
     message: 'Contact phone must be a valid phone number (e.g., +1234567890)',
   })
   contactPhone: string;
+
+  @ApiProperty({
+    example: 'e95d0a67-b57b-4c57-b0c0-70bf93d6f50c',
+    description: 'Merchant ID (required for superadmin, optional for admin)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'Merchant ID must be a valid UUID' })
+  merchantId?: string;
 }

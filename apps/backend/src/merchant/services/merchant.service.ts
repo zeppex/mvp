@@ -82,7 +82,7 @@ export class MerchantService {
     try {
       const merchant = await this.merchantRepository.findOne({
         where: { id },
-        relations: ['branches'],
+        relations: ['branches', 'branches.pos'],
       });
 
       if (!merchant) {

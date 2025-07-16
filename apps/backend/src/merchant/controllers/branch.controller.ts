@@ -33,7 +33,7 @@ import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('branches')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
 @Controller('branches')
 export class BranchController {
   constructor(private readonly branchService: BranchService) {}
@@ -51,8 +51,22 @@ export class BranchController {
     @Body() createBranchDto: CreateBranchDto,
     @Request() req,
   ): Promise<Branch> {
-    const merchantId = req.user.merchantId;
-    return this.branchService.create(merchantId, createBranchDto);
+    // MerchantGuard ensures that merchantId is available for non-superadmin users
+    // For superadmin, merchantId should come from request body
+    let merchantId = req.user.merchantId;
+
+    if (!merchantId) {
+      // For superadmin, extract from request body
+      merchantId = createBranchDto.merchantId;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
+    // Remove merchantId from DTO before passing to service
+    const { merchantId: _, ...branchData } = createBranchDto;
+
+    return this.branchService.create(merchantId, branchData);
   }
 
   @Get()
@@ -72,7 +86,16 @@ export class BranchController {
     @Request() req,
     @Query('includeDeactivated') includeDeactivated?: string,
   ): Promise<Branch[]> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     const includeDeactivatedBool = includeDeactivated === 'true';
     return this.branchService.findAll(merchantId, includeDeactivatedBool);
   }
@@ -94,7 +117,16 @@ export class BranchController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Branch> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     return this.branchService.findOne(id, merchantId);
   }
 
@@ -118,7 +150,16 @@ export class BranchController {
     @Body() updateBranchDto: UpdateBranchDto,
     @Request() req,
   ): Promise<Branch> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from request body
+    if (!merchantId) {
+      merchantId = (updateBranchDto as any).merchantId;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     // Verify branch belongs to merchant before updating
     await this.branchService.findOne(id, merchantId);
     return this.branchService.update(id, updateBranchDto);
@@ -141,7 +182,16 @@ export class BranchController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     // Verify branch belongs to merchant before deleting
     await this.branchService.findOne(id, merchantId);
     return this.branchService.remove(id);

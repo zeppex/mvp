@@ -36,7 +36,7 @@ import { UserRole } from '../../user/entities/user.entity';
 
 @ApiBearerAuth('access-token')
 @ApiTags('pos')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MerchantGuard)
 @Controller('pos')
 export class PosController {
   private readonly logger = new Logger(PosController.name);
@@ -58,10 +58,24 @@ export class PosController {
     @Body() createPosDto: CreatePosDto,
     @Request() req,
   ): Promise<Pos> {
-    const merchantId = req.user.merchantId;
+    // MerchantGuard ensures that merchantId is available for non-superadmin users
+    // For superadmin, merchantId should come from request body
+    let merchantId = req.user.merchantId;
+
+    if (!merchantId) {
+      // For superadmin, extract from request body
+      merchantId = createPosDto.merchantId;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     const branchId = createPosDto.branchId;
 
-    return this.posService.create(merchantId, branchId, createPosDto);
+    // Remove merchantId from DTO before passing to service
+    const { merchantId: _, ...posData } = createPosDto;
+
+    return this.posService.create(merchantId, branchId, posData);
   }
 
   @Get()
@@ -77,8 +91,16 @@ export class PosController {
     @Request() req,
     @Query('includeDeactivated') includeDeactivated?: string,
   ): Promise<Pos[]> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
     const branchId = req.user.branchId; // This might be undefined for admin users
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
 
     this.logger.log(
       `Fetching POS for merchant ${merchantId}, branch ${branchId}`,
@@ -105,7 +127,16 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<Pos> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     return this.posService.findOneByMerchant(merchantId, id);
   }
 
@@ -125,7 +156,16 @@ export class PosController {
     @Body() updatePosDto: UpdatePosDto,
     @Request() req,
   ): Promise<Pos> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from request body
+    if (!merchantId) {
+      merchantId = (updatePosDto as any).merchantId;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     // Verify POS belongs to merchant before updating
     await this.posService.findOneByMerchant(merchantId, id);
     return this.posService.updateByMerchant(merchantId, id, updatePosDto);
@@ -144,7 +184,16 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<void> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     // Verify POS belongs to merchant before deleting
     await this.posService.findOneByMerchant(merchantId, id);
     return this.posService.removeByMerchant(merchantId, id);
@@ -163,7 +212,16 @@ export class PosController {
     @Param('id', new ParseUUIDPipe()) posId: UUID,
     @Request() req,
   ): Promise<PaymentOrder> {
-    const merchantId = req.user.merchantId;
+    let merchantId = req.user.merchantId;
+
+    // For superadmin, we need merchantId from query params
+    if (!merchantId) {
+      merchantId = req.query.merchantId as string;
+      if (!merchantId) {
+        throw new ForbiddenException('Merchant ID is required');
+      }
+    }
+
     // Verify POS belongs to merchant before getting payment order
     await this.posService.findOneByMerchant(merchantId, posId);
     return this.paymentOrderService.getCurrentByMerchant(merchantId, posId);

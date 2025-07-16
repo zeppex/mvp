@@ -48,7 +48,7 @@ export class BranchService {
 
     return this.branchRepository.find({
       where: whereClause,
-      relations: ['merchant'],
+      relations: ['merchant', 'pos'],
     });
   }
 
@@ -59,7 +59,7 @@ export class BranchService {
       queryOptions.where.merchant = { id: merchantId };
     }
 
-    queryOptions.relations = ['merchant'];
+    queryOptions.relations = ['merchant', 'pos'];
 
     const branch = await this.branchRepository.findOne(queryOptions);
 
