@@ -11,13 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -36,14 +29,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Search,
   Edit,
   Trash2,
-  UserPlus,
-  Building2,
-  Store,
+  Users,
+  UserCheck,
+  UserX,
+  AlertCircle,
 } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+
+interface Branch {
+  id: string;
+  name: string;
+}
+
+interface PosTerminal {
+  id: string;
+  name: string;
+}
 
 interface User {
   id: string;
@@ -51,166 +64,263 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
-  branchId?: string;
-  branchName?: string;
-  posId?: string;
-  posName?: string;
   isActive: boolean;
+  branchId?: string;
+  branch?: Branch;
+  posId?: string;
+  pos?: PosTerminal;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [posTerminals, setPosTerminals] = useState<PosTerminal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
     lastName: "",
+    password: "",
     role: "",
     branchId: "",
     posId: "",
   });
 
-  // Mock data - replace with API call
   useEffect(() => {
-    const mockUsers: User[] = [
-      {
-        id: "1",
-        email: "cashier1@starbucks.com",
-        firstName: "Sarah",
-        lastName: "Johnson",
-        role: "CASHIER",
-        branchId: "branch1",
-        branchName: "Starbucks - Unicenter 2",
-        posId: "pos1",
-        posName: "POS Terminal 1",
-        isActive: true,
-        createdAt: "2024-01-15T10:30:00Z",
-      },
-      {
-        id: "2",
-        email: "manager@starbucks.com",
-        firstName: "Michael",
-        lastName: "Chen",
-        role: "BRANCH_ADMIN",
-        branchId: "branch1",
-        branchName: "Starbucks - Unicenter 2",
-        isActive: true,
-        createdAt: "2024-01-10T09:15:00Z",
-      },
-      {
-        id: "3",
-        email: "cashier2@starbucks.com",
-        firstName: "Emily",
-        lastName: "Davis",
-        role: "CASHIER",
-        branchId: "branch1",
-        branchName: "Starbucks - Unicenter 2",
-        posId: "pos2",
-        posName: "POS Terminal 2",
-        isActive: false,
-        createdAt: "2024-01-20T14:45:00Z",
-      },
-    ];
-    setUsers(mockUsers);
-    setLoading(false);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [usersResponse, branchesResponse, posResponse] = await Promise.all([
+        fetch("/api/merchant/users"),
+        fetch("/api/merchant/branches"),
+        fetch("/api/merchant/pos"),
+      ]);
+
+      if (!usersResponse.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      if (!branchesResponse.ok) {
+        throw new Error("Failed to fetch branches");
+      }
+      if (!posResponse.ok) {
+        throw new Error("Failed to fetch POS terminals");
+      }
+
+      const [usersData, branchesData, posData] = await Promise.all([
+        usersResponse.json(),
+        branchesResponse.json(),
+        posResponse.json(),
+      ]);
+
+      setUsers(usersData);
+      setBranches(branchesData);
+      setPosTerminals(posData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (
+      !newUser.email ||
+      !newUser.firstName ||
+      !newUser.lastName ||
+      !newUser.password ||
+      !newUser.role
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Validate role-specific requirements
+    if (newUser.role === "branch_admin" && !newUser.branchId) {
+      toast.error("Branch admin must be assigned to a branch");
+      return;
+    }
+
+    if (newUser.role === "cashier" && (!newUser.branchId || !newUser.posId)) {
+      toast.error("Cashier must be assigned to both a branch and POS terminal");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const userData = {
+        ...newUser,
+        branchId: newUser.branchId || undefined,
+        posId: newUser.posId || undefined,
+      };
+
+      const response = await fetch("/api/merchant/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create user");
+      }
+
+      const createdUser = await response.json();
+      setUsers([...users, createdUser]);
+      setNewUser({
+        email: "",
+        firstName: "",
+        lastName: "",
+        password: "",
+        role: "",
+        branchId: "",
+        posId: "",
+      });
+      setIsCreateDialogOpen(false);
+      toast.success("User created successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/merchant/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+
+      setUsers(users.filter((user) => user.id !== userId));
+      toast.success("User deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete user");
+    }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "Merchant Admin";
+      case "branch_admin":
+        return "Branch Admin";
+      case "cashier":
+        return "Cashier";
+      default:
+        return role;
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "default";
+      case "branch_admin":
+        return "secondary";
+      case "cashier":
+        return "outline";
+      default:
+        return "secondary";
+    }
+  };
 
   const filteredUsers = users.filter(
     (user) =>
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      getRoleDisplayName(user.role)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
-  const getRoleBadge = (role: string) => {
-    const roleConfig = {
-      ADMIN: { color: "bg-blue-100 text-blue-800", label: "Admin" },
-      BRANCH_ADMIN: {
-        color: "bg-green-100 text-green-800",
-        label: "Branch Admin",
-      },
-      CASHIER: { color: "bg-purple-100 text-purple-800", label: "Cashier" },
-    };
-    const config = roleConfig[role as keyof typeof roleConfig] || {
-      color: "bg-gray-100 text-gray-800",
-      label: role,
-    };
-    return <Badge className={config.color}>{config.label}</Badge>;
-  };
-
-  const handleCreateUser = () => {
-    // Prepare user data based on role requirements
-    const userData: any = {
-      id: Date.now().toString(),
-      email: newUser.email,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      role: newUser.role,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Only include branchId if role requires it and it has a value
-    if (
-      newUser.branchId &&
-      newUser.branchId.trim() !== "" &&
-      (newUser.role === "BRANCH_ADMIN" || newUser.role === "CASHIER")
-    ) {
-      userData.branchId = newUser.branchId;
-      userData.branchName = "Starbucks - Unicenter 2";
-    }
-
-    // Only include posId if role is CASHIER and it has a value
-    if (
-      newUser.posId &&
-      newUser.posId.trim() !== "" &&
-      newUser.role === "CASHIER"
-    ) {
-      userData.posId = newUser.posId;
-      userData.posName = "POS Terminal " + newUser.posId;
-    }
-
-    // Mock user creation - replace with API call
-    const newUserData: User = userData;
-    setUsers([...users, newUserData]);
-    setNewUser({
-      email: "",
-      firstName: "",
-      lastName: "",
-      role: "",
-      branchId: "",
-      posId: "",
-    });
-    setIsCreateDialogOpen(false);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId));
-  };
-
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              User Management
+            </h2>
+            <p className="text-muted-foreground">Loading users...</p>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              User Management
+            </h2>
+            <p className="text-muted-foreground">Error loading users</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={fetchData}>Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Users Management
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
           <p className="text-muted-foreground">
-            Manage your merchant users and their permissions
+            Manage users in your merchant account
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               Add User
             </Button>
           </DialogTrigger>
@@ -225,28 +335,30 @@ export default function UsersPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
                     value={newUser.firstName}
                     onChange={(e) =>
                       setNewUser({ ...newUser, firstName: e.target.value })
                     }
+                    placeholder="John"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
                     value={newUser.lastName}
                     onChange={(e) =>
                       setNewUser({ ...newUser, lastName: e.target.value })
                     }
+                    placeholder="Doe"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -254,10 +366,23 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setNewUser({ ...newUser, email: e.target.value })
                   }
+                  placeholder="john.doe@example.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
+                  placeholder="Password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
                 <Select
                   value={newUser.role}
                   onValueChange={(value) =>
@@ -265,35 +390,41 @@ export default function UsersPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRANCH_ADMIN">Branch Admin</SelectItem>
-                    <SelectItem value="CASHIER">Cashier</SelectItem>
+                    <SelectItem value="admin">Merchant Admin</SelectItem>
+                    <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                    <SelectItem value="cashier">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="branch">Branch</Label>
-                <Select
-                  value={newUser.branchId}
-                  onValueChange={(value) =>
-                    setNewUser({ ...newUser, branchId: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="branch1">
-                      Starbucks - Unicenter 2
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {newUser.role === "CASHIER" && (
+              {(newUser.role === "branch_admin" ||
+                newUser.role === "cashier") && (
                 <div className="space-y-2">
-                  <Label htmlFor="pos">POS Terminal (Optional)</Label>
+                  <Label htmlFor="branch">Branch *</Label>
+                  <Select
+                    value={newUser.branchId}
+                    onValueChange={(value) =>
+                      setNewUser({ ...newUser, branchId: value, posId: "" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {newUser.role === "cashier" && newUser.branchId && (
+                <div className="space-y-2">
+                  <Label htmlFor="pos">POS Terminal *</Label>
                   <Select
                     value={newUser.posId}
                     onValueChange={(value) =>
@@ -301,11 +432,16 @@ export default function UsersPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select POS terminal" />
+                      <SelectValue placeholder="Select a POS terminal" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pos1">POS Terminal 1</SelectItem>
-                      <SelectItem value="pos2">POS Terminal 2</SelectItem>
+                      {posTerminals
+                        .filter((pos) => pos.branchId === newUser.branchId)
+                        .map((pos) => (
+                          <SelectItem key={pos.id} value={pos.id}>
+                            {pos.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -318,10 +454,67 @@ export default function UsersPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateUser}>Create User</Button>
+              <Button onClick={handleCreateUser} disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create User"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{users.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {users.filter((u) => u.isActive).length} active
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.isActive).length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {users.filter((u) => !u.isActive).length} inactive
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "admin").length}
+            </div>
+            <p className="text-xs text-muted-foreground">Merchant admins</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Staff</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role !== "admin").length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Branch admins & cashiers
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -338,78 +531,100 @@ export default function UsersPage() {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
+                  className="pl-8 w-[300px]"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-64"
                 />
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>POS Terminal</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">
-                    {user.firstName} {user.lastName}
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      {user.branchName}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {user.posName ? (
-                      <div className="flex items-center gap-2">
-                        <Store className="h-4 w-4 text-muted-foreground" />
-                        {user.posName}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.isActive ? "default" : "secondary"}>
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>POS Terminal</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="text-center">
+                        <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No users found
+                        </h3>
+                        <p className="text-muted-foreground mb-4">
+                          {searchTerm
+                            ? "No users match your search criteria."
+                            : "You haven't created any users yet."}
+                        </p>
+                        {!searchTerm && (
+                          <Button onClick={() => setIsCreateDialogOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Your First User
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        {user.firstName} {user.lastName}
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={getRoleColor(user.role)}>
+                          {getRoleDisplayName(user.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.branch ? user.branch.name : "-"}
+                      </TableCell>
+                      <TableCell>{user.pos ? user.pos.name : "-"}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={user.isActive ? "default" : "secondary"}
+                        >
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/merchant/dashboard/users/${user.id}`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

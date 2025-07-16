@@ -1,16 +1,211 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowDownIcon, ArrowUpIcon, CheckCircle2, Clock, DollarSign, XCircle, Users, Building2, Store } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  XCircle,
+  Users,
+  Building2,
+  Store,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+interface DashboardStats {
+  merchant: {
+    id: string;
+    name: string;
+    address: string;
+    contact: string;
+    contactName: string;
+    contactPhone: string;
+    isActive: boolean;
+  };
+  orders: {
+    total: number;
+    completed: number;
+    pending: number;
+    failed: number;
+    todaySales: string;
+    todayCount: number;
+  };
+  transactions: {
+    total: number;
+    completed: number;
+    pending: number;
+    failed: number;
+    totalVolume: string;
+  };
+  recentTransactions: Array<{
+    id: string;
+    amount: string;
+    status: string;
+    description: string;
+    date: string;
+    exchange: string;
+  }>;
+  paymentMethods: Array<{
+    name: string;
+    percentage: number;
+    color: string;
+  }>;
+}
 
 export default function MerchantDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/merchant/dashboard/stats");
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard stats");
+        }
+        const data = await response.json();
+        setStats(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+            <p className="text-muted-foreground">
+              Error loading dashboard data
+            </p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+            <p className="text-muted-foreground">No data available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return (
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+        );
+      case "PENDING":
+      case "ACTIVE":
+      case "IN_PROGRESS":
+        return <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />;
+      case "FAILED":
+      case "CANCELLED":
+        return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
+      default:
+        return (
+          <ArrowUpIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+        );
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-green-100 dark:bg-green-900";
+      case "PENDING":
+      case "ACTIVE":
+      case "IN_PROGRESS":
+        return "bg-amber-100 dark:bg-amber-900";
+      case "FAILED":
+      case "CANCELLED":
+        return "bg-red-100 dark:bg-red-900";
+      default:
+        return "bg-green-100 dark:bg-green-900";
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+    if (diffInMinutes < 1440)
+      return `${Math.floor(diffInMinutes / 60)} hours ago`;
+    return `${Math.floor(diffInMinutes / 1440)} days ago`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            Welcome back, John
+            Welcome back, {stats.merchant.contactName || "Merchant"}
           </h2>
           <p className="text-muted-foreground">
             Here&apos;s an overview of your payment activity
@@ -39,9 +234,11 @@ export default function MerchantDashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$4,231.89</div>
+                <div className="text-2xl font-bold">
+                  ${stats.transactions.totalVolume}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  +20.1% from last month
+                  Total completed transactions
                 </p>
               </CardContent>
             </Card>
@@ -53,9 +250,11 @@ export default function MerchantDashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$652.00</div>
+                <div className="text-2xl font-bold">
+                  ${stats.orders.todaySales}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  12 transactions today
+                  {stats.orders.todayCount} transactions today
                 </p>
               </CardContent>
             </Card>
@@ -65,9 +264,11 @@ export default function MerchantDashboard() {
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">42</div>
+                <div className="text-2xl font-bold">
+                  {stats.orders.completed}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  +19% from last week
+                  {stats.transactions.completed} transactions
                 </p>
               </CardContent>
             </Card>
@@ -77,9 +278,9 @@ export default function MerchantDashboard() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3</div>
+                <div className="text-2xl font-bold">{stats.orders.pending}</div>
                 <p className="text-xs text-muted-foreground">
-                  2 awaiting confirmation
+                  {stats.transactions.pending} awaiting confirmation
                 </p>
               </CardContent>
             </Card>
@@ -94,116 +295,54 @@ export default function MerchantDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Payment Received
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        2 Venti Lattes - $10.00
-                      </p>
-                    </div>
-                    <div className="ml-auto font-medium">
-                      <div className="flex items-center">
-                        <ArrowUpIcon className="mr-1 h-4 w-4 text-green-500" />
-                        $10.00
+                  {stats.recentTransactions.length > 0 ? (
+                    stats.recentTransactions.map((transaction) => (
+                      <div key={transaction.id} className="flex items-center">
+                        <div
+                          className={`flex items-center justify-center w-10 h-10 rounded-full ${getStatusColor(
+                            transaction.status
+                          )}`}
+                        >
+                          {getStatusIcon(transaction.status)}
+                        </div>
+                        <div className="ml-4 space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {transaction.status === "COMPLETED"
+                              ? "Payment Received"
+                              : transaction.status === "PENDING"
+                              ? "Payment Pending"
+                              : transaction.status === "FAILED"
+                              ? "Payment Failed"
+                              : "Transaction"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.description} - {transaction.exchange}
+                          </p>
+                        </div>
+                        <div className="ml-auto font-medium">
+                          <div className="flex items-center">
+                            {transaction.status === "COMPLETED" ? (
+                              <ArrowUpIcon className="mr-1 h-4 w-4 text-green-500" />
+                            ) : transaction.status === "FAILED" ? (
+                              <XCircle className="mr-1 h-4 w-4 text-red-500" />
+                            ) : (
+                              <Clock className="mr-1 h-4 w-4 text-amber-500" />
+                            )}
+                            ${transaction.amount}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatTimeAgo(transaction.date)}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        5 minutes ago
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Payment Received
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Cappuccino - $4.50
-                      </p>
-                    </div>
-                    <div className="ml-auto font-medium">
-                      <div className="flex items-center">
-                        <ArrowUpIcon className="mr-1 h-4 w-4 text-green-500" />
-                        $4.50
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        20 minutes ago
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900">
-                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Payment Pending
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Mocha Frappuccino - $6.75
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        No recent transactions
                       </p>
                     </div>
-                    <div className="ml-auto font-medium">
-                      <div className="flex items-center">
-                        <Clock className="mr-1 h-4 w-4 text-amber-500" />
-                        $6.75
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        35 minutes ago
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900">
-                      <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Payment Failed
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Iced Coffee - $3.25
-                      </p>
-                    </div>
-                    <div className="ml-auto font-medium">
-                      <div className="flex items-center">
-                        <XCircle className="mr-1 h-4 w-4 text-red-500" />
-                        $3.25
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        1 hour ago
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900">
-                      <ArrowDownIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Refund Issued
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Chai Latte - $5.25
-                      </p>
-                    </div>
-                    <div className="ml-auto font-medium">
-                      <div className="flex items-center">
-                        <ArrowDownIcon className="mr-1 h-4 w-4 text-red-500" />
-                        $5.25
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        2 hours ago
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="mt-4 flex justify-center">
                   <Button variant="outline" asChild>
@@ -223,45 +362,27 @@ export default function MerchantDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                      <span className="text-sm">Binance Pay</span>
+                  {stats.paymentMethods.map((method) => (
+                    <div key={method.name}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`h-2 w-2 rounded-full ${method.color}`}
+                          ></div>
+                          <span className="text-sm">{method.name}</span>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {method.percentage}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 mt-1">
+                        <div
+                          className={`h-2 rounded-full ${method.color}`}
+                          style={{ width: `${method.percentage}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <span className="text-sm font-medium">68%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div
-                      className="h-2 rounded-full bg-blue-500"
-                      style={{ width: "68%" }}
-                    ></div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm">Coinbase</span>
-                    </div>
-                    <span className="text-sm font-medium">22%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div
-                      className="h-2 rounded-full bg-green-500"
-                      style={{ width: "22%" }}
-                    ></div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                      <span className="text-sm">Crypto.com</span>
-                    </div>
-                    <span className="text-sm font-medium">10%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div
-                      className="h-2 rounded-full bg-purple-500"
-                      style={{ width: "10%" }}
-                    ></div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

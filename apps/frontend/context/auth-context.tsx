@@ -44,24 +44,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    // The login endpoint is a folder with a route.ts file
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    const login = async (email: string, password: string) => {
+      setIsLoading(true);
+      // The login endpoint is a folder with a route.ts file
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (response.ok) {
-      const { user: loggedInUser } = await response.json();
-      setUser(loggedInUser);
-    } else {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Login failed");
-    }
-    setIsLoading(false);
-  };
+      if (response.ok) {
+        const { user: loggedInUser } = await response.json();
+        setUser(loggedInUser);
+
+        // Redirect based on user role
+        if (loggedInUser.role === "superadmin") {
+          window.location.href = "/admin/dashboard";
+        } else {
+          window.location.href = "/merchant/dashboard";
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Login failed");
+      }
+      setIsLoading(false);
+    };
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });

@@ -2,7 +2,7 @@
 
 import { Label } from "@/components/ui/label"
 
-import { useState } from "react"
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -36,132 +36,149 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-// Mock transaction data
-const transactions = [
-  {
-    id: "TX123456",
-    date: "2025-05-19T09:15:00",
-    description: "2 Venti Lattes",
-    amount: 10.0,
-    status: "completed",
-    paymentMethod: "Binance Pay",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123455",
-    date: "2025-05-19T08:45:00",
-    description: "Cappuccino",
-    amount: 4.5,
-    status: "completed",
-    paymentMethod: "Coinbase",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123454",
-    date: "2025-05-19T08:30:00",
-    description: "Mocha Frappuccino",
-    amount: 6.75,
-    status: "pending",
-    paymentMethod: "Binance Pay",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123453",
-    date: "2025-05-19T08:00:00",
-    description: "Iced Coffee",
-    amount: 3.25,
-    status: "failed",
-    paymentMethod: "Crypto.com",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123452",
-    date: "2025-05-19T07:30:00",
-    description: "Chai Latte",
-    amount: 5.25,
-    status: "refunded",
-    paymentMethod: "Binance Pay",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123451",
-    date: "2025-05-18T16:45:00",
-    description: "Espresso",
-    amount: 3.0,
-    status: "completed",
-    paymentMethod: "Binance Pay",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123450",
-    date: "2025-05-18T15:30:00",
-    description: "Caramel Macchiato",
-    amount: 5.75,
-    status: "completed",
-    paymentMethod: "Coinbase",
-    customer: "Anonymous",
-  },
-  {
-    id: "TX123449",
-    date: "2025-05-18T14:15:00",
-    description: "Americano",
-    amount: 3.5,
-    status: "completed",
-    paymentMethod: "Binance Pay",
-    customer: "Anonymous",
-  },
-]
+interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: string;
+  status: string;
+  exchange: string;
+  merchantId: string;
+  branchId: string;
+  posId: string;
+  paymentOrderId?: string;
+  userId?: string;
+  metadata?: any;
+  externalTransactionId?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function TransactionsPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [showRefundDialog, setShowRefundDialog] = useState(false)
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
-  const [refundAmount, setRefundAmount] = useState("")
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch("/api/merchant/transactions");
+        if (!response.ok) {
+          throw new Error("Failed to fetch transactions");
+        }
+        const data = await response.json();
+        setTransactions(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const filteredTransactions = transactions.filter((transaction) => {
     // Apply search filter
     const matchesSearch =
       transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase())
+      transaction.description.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Apply status filter
-    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter
+    const matchesStatus =
+      statusFilter === "all" ||
+      transaction.status.toLowerCase() === statusFilter;
 
-    return matchesSearch && matchesStatus
-  })
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleRefund = (transaction: any) => {
-    setSelectedTransaction(transaction)
-    setRefundAmount(transaction.amount.toString())
-    setShowRefundDialog(true)
-  }
+  const handleRefund = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setRefundAmount(transaction.amount);
+    setShowRefundDialog(true);
+  };
 
   const processRefund = () => {
-    // Simulate processing refund
+    // TODO: Implement refund functionality
     setTimeout(() => {
-      setShowRefundDialog(false)
-    }, 1000)
-  }
+      setShowRefundDialog(false);
+    }, 1000);
+  };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case "pending":
-        return <Clock className="h-4 w-4 text-amber-500" />
+        return <Clock className="h-4 w-4 text-amber-500" />;
       case "failed":
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className="h-4 w-4 text-red-500" />;
       case "refunded":
-        return <ArrowDownIcon className="h-4 w-4 text-blue-500" />
+        return <ArrowDownIcon className="h-4 w-4 text-blue-500" />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString()
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
+            <p className="text-muted-foreground">Loading transactions...</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
+            <p className="text-muted-foreground">Error loading transactions</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -169,9 +186,15 @@ export default function TransactionsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
-          <p className="text-muted-foreground">View and manage your payment transactions</p>
+          <p className="text-muted-foreground">
+            View and manage your payment transactions
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
@@ -182,7 +205,9 @@ export default function TransactionsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
-          <CardDescription>View all your transactions and their statuses</CardDescription>
+          <CardDescription>
+            View all your transactions and their statuses
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
@@ -208,7 +233,6 @@ export default function TransactionsPage() {
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -223,7 +247,7 @@ export default function TransactionsPage() {
                   <TableHead>Description</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Exchange</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -237,36 +261,50 @@ export default function TransactionsPage() {
                 ) : (
                   filteredTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">{transaction.id}</TableCell>
+                      <TableCell className="font-medium">
+                        {transaction.id}
+                      </TableCell>
                       <TableCell>{formatDate(transaction.date)}</TableCell>
                       <TableCell>{transaction.description}</TableCell>
-                      <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        ${parseFloat(transaction.amount).toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getStatusIcon(transaction.status)}
-                          <span className="capitalize">{transaction.status}</span>
+                          <span className="capitalize">
+                            {transaction.status.toLowerCase()}
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>{transaction.paymentMethod}</TableCell>
+                      <TableCell>{transaction.exchange}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleRefund(transaction)}
-                              disabled={transaction.status !== "completed"}
+                              onClick={() =>
+                                navigator.clipboard.writeText(transaction.id)
+                              }
                             >
-                              Process Refund
+                              Copy transaction ID
                             </DropdownMenuItem>
-                            <DropdownMenuItem>Download Receipt</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {transaction.status.toLowerCase() ===
+                              "completed" && (
+                              <DropdownMenuItem
+                                onClick={() => handleRefund(transaction)}
+                              >
+                                Process refund
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem>View details</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -283,40 +321,36 @@ export default function TransactionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
-            <DialogDescription>You are about to refund transaction {selectedTransaction?.id}</DialogDescription>
+            <DialogDescription>
+              Are you sure you want to process a refund for transaction{" "}
+              {selectedTransaction?.id}?
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="refund-amount">Refund Amount (USD)</Label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                <Input
-                  id="refund-amount"
-                  type="number"
-                  className="pl-7"
-                  value={refundAmount}
-                  onChange={(e) => setRefundAmount(e.target.value)}
-                  step="0.01"
-                  min="0.01"
-                  max={selectedTransaction?.amount}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Maximum refund amount: ${selectedTransaction?.amount.toFixed(2)}
-              </p>
+              <Label htmlFor="refundAmount">Refund Amount</Label>
+              <Input
+                id="refundAmount"
+                type="number"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                step="0.01"
+                min="0.01"
+                max={selectedTransaction?.amount}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRefundDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowRefundDialog(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={processRefund}>
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Process Refund
-            </Button>
+            <Button onClick={processRefund}>Process Refund</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

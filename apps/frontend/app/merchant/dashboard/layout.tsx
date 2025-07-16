@@ -193,7 +193,7 @@ export default function MerchantDashboardLayout({
               className="flex items-center gap-2 bg-transparent"
             >
               <User className="h-4 w-4" />
-              <span>Merchant</span>
+              <span>Merchant Admin</span>
             </Button>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>

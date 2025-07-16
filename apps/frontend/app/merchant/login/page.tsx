@@ -16,22 +16,20 @@ import { AlertCircle } from "lucide-react"
 export default function MerchantLogin() {
   const router = useRouter()
   const { login, isLoading } = useAuth()
-  const [email, setEmail] = useState("john_doe@starbucks.com")
-  const [password, setPassword] = useState("password123")
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("admin@samplestore.com");
+  const [password, setPassword] = useState("Admin!123");
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
     try {
       await login(email, password);
-      // The middleware will handle the redirect based on user role
-      // For merchant users (admin, branch_admin, cashier), it will redirect to /merchant/dashboard
-      // For superadmin, it will redirect to /admin/dashboard
+      // The login function will handle the redirect based on user role
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
@@ -60,7 +58,7 @@ export default function MerchantLogin() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                placeholder="john_doe@starbucks.com"
+                placeholder="admin@samplestore.com"
                 type="email"
                 required
                 value={email}
@@ -84,7 +82,10 @@ export default function MerchantLogin() {
             </Button>
             <p className="mt-4 text-center text-sm text-gray-500">
               Don&apos;t have an account?{" "}
-              <Link href="/merchant/register" className="text-primary underline-offset-4 hover:underline">
+              <Link
+                href="/merchant/register"
+                className="text-primary underline-offset-4 hover:underline"
+              >
                 Contact Zeppex
               </Link>
             </p>
@@ -92,5 +93,5 @@ export default function MerchantLogin() {
         </form>
       </Card>
     </div>
-  )
+  );
 }
