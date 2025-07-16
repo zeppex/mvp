@@ -12,6 +12,7 @@ import { CreatePosDto, UpdatePosDto } from '../dto';
 import { BranchService } from './branch.service';
 import { QrCodeService } from '../../shared/services/qr-code.service';
 import { UUID } from 'src/shared/types/uuid';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
 @Injectable()
 export class PosService {
@@ -111,7 +112,37 @@ export class PosService {
       throw new NotFoundException(
         `POS ${id} not found for merchant ${merchantId}`,
       );
-    return pos;
+
+    // Get current payment order for this POS (ACTIVE status)
+    const currentPaymentOrder = await this.paymentOrderRepository.findOne({
+      where: {
+        pos: { id },
+        status: PaymentOrderStatus.ACTIVE,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    // Get recent transactions for this POS
+    const transactions = await this.paymentOrderRepository.find({
+      where: {
+        pos: { id },
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 20, // Limit to 20 most recent transactions
+    });
+
+    // Add the additional data to the POS object
+    const posWithData = {
+      ...pos,
+      currentPaymentOrder: currentPaymentOrder || undefined,
+      transactions: transactions,
+    };
+
+    return posWithData as any;
   }
 
   async findOneByPosId(id: UUID): Promise<Pos> {

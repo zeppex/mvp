@@ -26,32 +26,59 @@ export class PaymentOrderService {
     private readonly configService: ConfigService,
   ) {}
 
+  // Helper: get next queued order for a POS
+  private async getNextQueuedOrder(posId: UUID): Promise<PaymentOrder | null> {
+    return this.orderRepository.findOne({
+      where: {
+        pos: { id: posId },
+        status: PaymentOrderStatus.QUEUED,
+      },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  // Helper: activate a queued order
+  private async activateQueuedOrder(
+    order: PaymentOrder,
+  ): Promise<PaymentOrder> {
+    order.status = PaymentOrderStatus.ACTIVE;
+    // Set new TTL
+    const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
+    order.expiresAt = new Date(Date.now() + ttlMs);
+    return this.orderRepository.save(order);
+  }
+
   async create(
     merchantId: UUID,
     branchId: UUID,
     posId: UUID,
     createDto: CreatePaymentOrderDto,
   ): Promise<PaymentOrder> {
-    // Get branch to validate it exists
-    const branch = await this.branchService.findOne(branchId, merchantId);
-
+    await this.branchService.findOne(branchId, merchantId);
     await this.posService.findOne(merchantId, branchId, posId);
-
+    // Check for existing ACTIVE order
+    const activeOrder = await this.orderRepository.findOne({
+      where: {
+        pos: { id: posId },
+        status: PaymentOrderStatus.ACTIVE,
+      },
+    });
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
     order.branch = { id: branchId } as any;
     order.pos = { id: posId } as any;
-    order.status = createDto.status ?? PaymentOrderStatus.ACTIVE;
-
-    // Set expiration time based on TTL configuration
-    const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
-    order.expiresAt = new Date(Date.now() + ttlMs);
-
+    if (activeOrder) {
+      order.status = PaymentOrderStatus.QUEUED;
+      order.expiresAt = null;
+    } else {
+      order.status = PaymentOrderStatus.ACTIVE;
+      const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
+      order.expiresAt = new Date(Date.now() + ttlMs);
+    }
     this.logger.log(
-      `Creating payment order with TTL: ${ttlMs}ms, expires at: ${order.expiresAt}`,
+      `Creating payment order for POS ${posId} with status ${order.status}`,
     );
-
     return this.orderRepository.save(order);
   }
 
@@ -60,24 +87,30 @@ export class PaymentOrderService {
     posId: UUID,
     createDto: CreatePaymentOrderDto,
   ): Promise<PaymentOrder> {
-    // Verify POS belongs to merchant
     const pos = await this.posService.findOneByMerchant(merchantId, posId);
-
+    // Check for existing ACTIVE order
+    const activeOrder = await this.orderRepository.findOne({
+      where: {
+        pos: { id: posId },
+        status: PaymentOrderStatus.ACTIVE,
+      },
+    });
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
     order.branch = { id: pos.branch.id } as any;
     order.pos = { id: posId } as any;
-    order.status = createDto.status ?? PaymentOrderStatus.ACTIVE;
-
-    // Set expiration time based on TTL configuration
-    const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
-    order.expiresAt = new Date(Date.now() + ttlMs);
-
+    if (activeOrder) {
+      order.status = PaymentOrderStatus.QUEUED;
+      order.expiresAt = null;
+    } else {
+      order.status = PaymentOrderStatus.ACTIVE;
+      const ttlMs = this.configService.get<number>('PAYMENT_ORDER_TTL', 120000);
+      order.expiresAt = new Date(Date.now() + ttlMs);
+    }
     this.logger.log(
-      `Creating payment order with TTL: ${ttlMs}ms, expires at: ${order.expiresAt}`,
+      `Creating payment order for POS ${posId} with status ${order.status}`,
     );
-
     return this.orderRepository.save(order);
   }
 
@@ -254,10 +287,8 @@ export class PaymentOrderService {
     merchantId: UUID,
     posId: UUID,
   ): Promise<PaymentOrder> {
-    // Verify the POS belongs to the merchant
     await this.posService.findOneByMerchant(merchantId, posId);
-
-    const order = await this.orderRepository.findOne({
+    let order = await this.orderRepository.findOne({
       where: {
         pos: { id: posId },
         status: PaymentOrderStatus.ACTIVE,
@@ -265,21 +296,31 @@ export class PaymentOrderService {
       order: { createdAt: 'DESC' },
       relations: ['pos'],
     });
-
-    if (!order) {
-      throw new NotFoundException(`No active order for pos: ${posId}`);
-    }
-
-    // Check if order has expired
-    if (order.isExpired()) {
+    if (order && order.isExpired()) {
       order.status = PaymentOrderStatus.EXPIRED;
       await this.orderRepository.save(order);
       this.logger.log(
         `Payment order ${order.id} expired and was marked as EXPIRED`,
       );
-      throw new NotFoundException(`No active order for pos: ${posId}`);
+      // Promote next queued order
+      const next = await this.getNextQueuedOrder(posId);
+      if (next) {
+        order = await this.activateQueuedOrder(next);
+        this.logger.log(`Promoted queued order ${order.id} to ACTIVE`);
+      } else {
+        throw new NotFoundException(`No active order for pos: ${posId}`);
+      }
     }
-
+    if (!order) {
+      // No active order, try to promote next queued order
+      const next = await this.getNextQueuedOrder(posId);
+      if (next) {
+        order = await this.activateQueuedOrder(next);
+        this.logger.log(`Promoted queued order ${order.id} to ACTIVE`);
+      } else {
+        throw new NotFoundException(`No active order for pos: ${posId}`);
+      }
+    }
     return order;
   }
 

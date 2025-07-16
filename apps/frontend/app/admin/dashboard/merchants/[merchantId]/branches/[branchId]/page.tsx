@@ -294,13 +294,10 @@ export default function BranchDetailPage() {
           <CardContent className="space-y-4">
             {branch.pos && branch.pos.length > 0 ? (
               branch.pos.map((pos) => (
-                <div
+                <Link
                   key={pos.id}
+                  href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    // Future: Navigate to POS detail page
-                    // window.location.href = `/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`;
-                  }}
                 >
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{pos.name}</p>
@@ -311,7 +308,7 @@ export default function BranchDetailPage() {
                   <Badge variant={pos.isActive ? "default" : "secondary"}>
                     {pos.isActive ? "Active" : "Inactive"}
                   </Badge>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8">

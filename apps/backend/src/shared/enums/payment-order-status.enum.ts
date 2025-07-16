@@ -5,4 +5,5 @@ export enum PaymentOrderStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
+  QUEUED = 'QUEUED',
 }

@@ -24,21 +24,8 @@ export class QrCodeService {
       'http://localhost:3000',
     );
 
-    // Check if we should use the new simplified format
-    const useSimplifiedFormat = this.configService.get<boolean>(
-      'USE_SIMPLIFIED_QR_URLS',
-      false,
-    );
-
-    let qrCodeUrl: string;
-
-    if (useSimplifiedFormat) {
-      // New simplified format: /payment/{posId}
-      qrCodeUrl = `${baseUrl}/payment/${posId}`;
-    } else {
-      // Legacy format: /payment/{merchantId}/{branchId}/{posId}
-      qrCodeUrl = `${baseUrl}/payment/${merchantId}/${branchId}/${posId}`;
-    }
+    // Point to the public payment order page
+    const qrCodeUrl = `${baseUrl}/payment-order/${posId}`;
 
     this.logger.log(`Generated QR code URL for POS ${posId}: ${qrCodeUrl}`);
 
@@ -87,7 +74,7 @@ export class QrCodeService {
       'FRONTEND_URL',
       'http://localhost:3000',
     );
-    const qrCodeUrl = `${baseUrl}/payment/${posId}`;
+    const qrCodeUrl = `${baseUrl}/payment-order/${posId}`;
 
     this.logger.log(`Generated simplified QR code URL for POS ${posId}: ${qrCodeUrl}`);
 

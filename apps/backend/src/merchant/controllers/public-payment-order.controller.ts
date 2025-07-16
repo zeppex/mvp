@@ -4,64 +4,78 @@ import {
   Param,
   ParseUUIDPipe,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { PaymentOrderService } from '../services/payment-order.service';
+import { PosService } from '../services/pos.service';
 import { PaymentOrder } from '../entities/payment-order.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 
-@ApiTags('public-payment-orders')
-@Controller('public/merchants/:merchantId/branches/:branchId/pos/:posId/orders')
+@ApiTags('public-payment-order')
+@Controller('public/payment-order')
 export class PublicPaymentOrderController {
-  constructor(private readonly orderService: PaymentOrderService) {}
+  private readonly logger = new Logger(PublicPaymentOrderController.name);
 
-  @Get('current')
-  @ApiOperation({
-    summary:
-      'Get current active payment order for a POS (Public endpoint for QR code scanning)',
-  })
-  @ApiParam({
-    name: 'merchantId',
-    description: 'ID of the merchant',
-    type: 'string',
-  })
-  @ApiParam({
-    name: 'branchId',
-    description: 'ID of the branch',
-    type: 'string',
-  })
-  @ApiParam({ name: 'posId', description: 'ID of the POS', type: 'string' })
+  constructor(
+    private readonly paymentOrderService: PaymentOrderService,
+    private readonly posService: PosService,
+  ) {}
+
+  @Get('pos/:posId')
+  @ApiOperation({ summary: 'Get current payment order for a POS (public)' })
+  @ApiParam({ name: 'posId', description: 'POS ID', type: 'string' })
   @ApiResponse({
     status: 200,
-    description: 'Current active payment order.',
+    description: 'Return the current payment order.',
     type: PaymentOrder,
   })
-  @ApiResponse({ status: 404, description: 'No active payment order found.' })
-  async getCurrent(
-    @Param('merchantId', new ParseUUIDPipe()) merchantId: UUID,
-    @Param('branchId', new ParseUUIDPipe()) branchId: UUID,
+  @ApiResponse({ status: 404, description: 'POS or payment order not found.' })
+  async getCurrentPaymentOrder(
     @Param('posId', new ParseUUIDPipe()) posId: UUID,
-  ): Promise<any> {
+  ): Promise<PaymentOrder> {
+    this.logger.log(`Getting current payment order for POS: ${posId}`);
+
+    // First, verify the POS exists and is active
+    const pos = await this.posService.findOneByPosId(posId);
+
+    if (!pos.isActive) {
+      throw new NotFoundException(`POS ${posId} is not active`);
+    }
+
+    // Get the current payment order for this POS
     try {
-      // Use the new service method that validates merchant ownership
-      const order = await this.orderService.getCurrentByMerchant(
-        merchantId,
+      const currentOrder = await this.paymentOrderService.getCurrentByMerchant(
+        pos.branch.merchant.id,
         posId,
       );
+
+      // Return only the necessary information for the public payment page
       return {
-        ...order,
-        amount: Number(order.amount).toFixed(2),
-        expiresIn: order.expiresAt
-          ? Math.max(0, order.expiresAt.getTime() - Date.now())
-          : null,
-        qrCodeUrl: `/public/merchants/${merchantId}/branches/${branchId}/pos/${posId}/orders/current`,
-      };
+        id: currentOrder.id,
+        amount: currentOrder.amount,
+        currency: 'USD', // Default currency since it's not stored in the entity
+        description: currentOrder.description,
+        status: currentOrder.status,
+        createdAt: currentOrder.createdAt,
+        expiresAt: currentOrder.expiresAt,
+        pos: {
+          id: pos.id,
+          name: pos.name,
+          description: pos.description,
+        },
+        branch: {
+          id: pos.branch.id,
+          name: pos.branch.name,
+        },
+        merchant: {
+          id: pos.branch.merchant.id,
+          name: pos.branch.merchant.name,
+        },
+      } as any;
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      // For any other error, return a generic not found to avoid exposing internal details
-      throw new NotFoundException('No active payment order found.');
+      this.logger.log(`No current payment order found for POS: ${posId}`);
+      throw new NotFoundException(`No active payment order found for this POS`);
     }
   }
 }
