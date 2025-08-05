@@ -2,8 +2,8 @@ import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../../user/services/user.service';
 import { UserRole } from '../../user/entities/user.entity';
-import { MerchantService } from '../../merchant/services/merchant.service';
-import { CreateMerchantDto } from '../../merchant/dto/create-merchant.dto';
+import { MerchantService } from '../../core/services/merchant.service';
+import { CreateMerchantDto } from '../../core/dto/create-merchant.dto';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {

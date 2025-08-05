@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PaymentOrderService } from '../../merchant/services/payment-order.service';
+import { PaymentOrderService } from '../../core/services/payment-order.service';
 
 @Injectable()
 export class PaymentOrderCleanupService {

@@ -11,10 +11,15 @@ import {
   TransactionStatus,
   ExchangeType,
 } from './transaction.entity';
-import { CreateTransactionDto } from './dto';
-import { MerchantService } from '../merchant/services/merchant.service';
-import { BranchService } from '../merchant/services/branch.service';
-import { PosService } from '../merchant/services/pos.service';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { User } from '../user/entities/user.entity';
+import { PaymentOrder } from '../core/entities/payment-order.entity';
+import { Merchant } from '../core/entities/merchant.entity';
+import { Branch } from '../core/entities/branch.entity';
+import { Pos } from '../core/entities/pos.entity';
+import { MerchantService } from '../core/services/merchant.service';
+import { BranchService } from '../core/services/branch.service';
+import { PosService } from '../core/services/pos.service';
 import { UUID } from '../shared/types/uuid';
 
 @Injectable()

@@ -10,9 +10,9 @@ import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { Merchant } from '../../merchant/entities/merchant.entity';
-import { Branch } from '../../merchant/entities/branch.entity';
-import { Pos } from '../../merchant/entities/pos.entity';
+import { Merchant } from '../../core/entities/merchant.entity';
+import { Branch } from '../../core/entities/branch.entity';
+import { Pos } from '../../core/entities/pos.entity';
 
 @Injectable()
 export class UserService {

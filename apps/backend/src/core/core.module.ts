@@ -50,4 +50,4 @@ import { QrCodeModule } from '../shared/qr-code.module';
   ],
   exports: [MerchantService, BranchService, PosService, PaymentOrderService],
 })
-export class MerchantModule {}
+export class CoreModule {}

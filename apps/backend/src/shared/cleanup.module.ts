@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CoreModule } from '../core/core.module';
 import { PaymentOrderCleanupService } from './services/payment-order-cleanup.service';
-import { MerchantModule } from '../merchant/merchant.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), MerchantModule],
+  imports: [ScheduleModule.forRoot(), CoreModule],
   providers: [PaymentOrderCleanupService],
-  exports: [PaymentOrderCleanupService],
 })
 export class CleanupModule {}

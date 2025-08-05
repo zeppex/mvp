@@ -9,8 +9,8 @@ import { CleanupModule } from './shared/cleanup.module';
 import { SeedModule } from './shared/seed.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MerchantModule } from './merchant/merchant.module';
-import { PaymentOrderModule } from './merchant/payment-order.module';
+import { CoreModule } from './core/core.module';
+import { PaymentOrderModule } from './core/payment-order.module';
 import { TransactionModule } from './transactions/transaction.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
@@ -86,7 +86,7 @@ import * as Joi from 'joi';
     SeedModule,
     UserModule,
     AuthModule,
-    MerchantModule,
+    CoreModule,
     PaymentOrderModule,
     TransactionModule,
     HealthModule,

@@ -1,17 +1,16 @@
 import {
   Entity,
+  PrimaryGeneratedColumn,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
-import { Merchant } from '../merchant/entities/merchant.entity';
-import { Branch } from '../merchant/entities/branch.entity';
-import { Pos } from '../merchant/entities/pos.entity';
+import { Merchant } from '../core/entities/merchant.entity';
+import { Branch } from '../core/entities/branch.entity';
+import { Pos } from '../core/entities/pos.entity';
 
 import { User } from '../user/entities/user.entity';
 
@@ -32,7 +31,7 @@ export enum ExchangeType {
 
 @Entity('transactions')
 export class Transaction {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({
@@ -112,11 +111,4 @@ export class Transaction {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @BeforeInsert()
-  generateId() {
-    if (!this.id) {
-      this.id = uuidv4();
-    }
-  }
 }

@@ -5,10 +5,10 @@ import { AppModule } from '../../src/app.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PaymentOrder } from '../../src/merchant/entities/payment-order.entity';
-import { Pos } from '../../src/merchant/entities/pos.entity';
-import { Branch } from '../../src/merchant/entities/branch.entity';
-import { Merchant } from '../../src/merchant/entities/merchant.entity';
+import { PaymentOrder } from '../../src/core/entities/payment-order.entity';
+import { Pos } from '../../src/core/entities/pos.entity';
+import { Branch } from '../../src/core/entities/branch.entity';
+import { Merchant } from '../../src/core/entities/merchant.entity';
 import { User } from '../../src/user/entities/user.entity';
 import { PaymentOrderStatus } from '../../src/shared/enums/payment-order-status.enum';
 

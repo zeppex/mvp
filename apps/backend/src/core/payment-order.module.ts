@@ -5,12 +5,12 @@ import { PaymentOrderService } from './services/payment-order.service';
 import { PaymentOrderController } from './controllers/payment-order.controller';
 import { PublicPaymentOrderController } from './controllers/public-payment-order.controller';
 import { PublicPaymentController } from './controllers/public-payment.controller';
-import { MerchantModule } from './merchant.module';
+import { CoreModule } from './core.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PaymentOrder]),
-    forwardRef(() => MerchantModule),
+    forwardRef(() => CoreModule),
   ],
   providers: [PaymentOrderService],
   controllers: [

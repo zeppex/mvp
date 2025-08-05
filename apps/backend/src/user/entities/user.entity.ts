@@ -1,16 +1,16 @@
 import {
   Entity,
+  PrimaryGeneratedColumn,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
-import { Merchant } from '../../merchant/entities/merchant.entity';
-import { Branch } from '../../merchant/entities/branch.entity';
-import { Pos } from '../../merchant/entities/pos.entity';
+import { Merchant } from '../../core/entities/merchant.entity';
+import { Branch } from '../../core/entities/branch.entity';
+import { Pos } from '../../core/entities/pos.entity';
 
 export enum UserRole {
   SUPERADMIN = 'superadmin', // Platform super admin - can create merchants
@@ -21,7 +21,7 @@ export enum UserRole {
 
 @Entity('users')
 export class User {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ unique: true })
@@ -60,9 +60,4 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @BeforeInsert()
-  generateId() {
-    this.id = uuidv4();
-  }
 }
