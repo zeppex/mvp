@@ -186,37 +186,67 @@ export class PaymentOrderController {
     return this.orderService.removeByMerchant(merchantId, id);
   }
 
-  @Post(':id/trigger-in-progress')
-  @HttpCode(200)
-  @ApiOperation({
-    summary:
-      'Trigger payment order to IN_PROGRESS status (for payment processing)',
-  })
-  @ApiParam({ name: 'id', description: 'Payment order ID', type: 'string' })
+  @Post(':id/complete')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
+  @ApiOperation({ summary: 'Complete a payment order and mint tokens' })
+  @ApiParam({ name: 'id', description: 'Payment order ID' })
   @ApiResponse({
     status: 200,
-    description: 'Payment order status changed to IN_PROGRESS.',
+    description: 'Payment order completed successfully.',
     type: PaymentOrder,
   })
-  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  @HttpCode(200)
+  async completePayment(
+    @Param('id', new ParseUUIDPipe()) id: UUID,
+    @Request() req,
+  ): Promise<any> {
+    try {
+      const merchantId = req.user.merchantId;
+      const order = await this.orderService.completePayment(merchantId, id);
+
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+        message:
+          'Payment completed successfully. ZEPPEX tokens have been minted to the branch.',
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('Invalid input: ' + error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/trigger-in-progress')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.BRANCH_ADMIN)
+  @ApiOperation({ summary: 'Trigger payment order to in-progress status' })
+  @ApiParam({ name: 'id', description: 'Payment order ID' })
   @ApiResponse({
-    status: 403,
-    description: 'Payment order cannot be processed (expired or wrong status).',
+    status: 200,
+    description: 'Payment order status updated to in-progress.',
+    type: PaymentOrder,
   })
+  @HttpCode(200)
   async triggerInProgress(
     @Param('id', new ParseUUIDPipe()) id: UUID,
     @Request() req,
   ): Promise<any> {
-    const merchantId = req.user.merchantId;
-    // Verify order belongs to merchant before triggering
-    await this.orderService.findOneByMerchant(merchantId, id);
-    const order = await this.orderService.triggerInProgressByMerchant(
-      merchantId,
-      id,
-    );
-    return {
-      ...order,
-      amount: Number(order.amount).toFixed(2),
-    };
+    try {
+      const merchantId = req.user.merchantId;
+      const order = await this.orderService.triggerInProgressByMerchant(
+        merchantId,
+        id,
+      );
+      return {
+        ...order,
+        amount: Number(order.amount).toFixed(2),
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('Invalid input: ' + error.message);
+      }
+      throw error;
+    }
   }
 }

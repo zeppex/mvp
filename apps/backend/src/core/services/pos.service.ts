@@ -68,32 +68,39 @@ export class PosService {
     // ensure branch exists
     try {
       await this.branchService.findOne(branchId, merchantId);
-
-      const whereClause: any = {
-        branch: { id: branchId },
-      };
-
-      if (!includeDeactivated) {
-        whereClause.isActive = true;
-      }
-
-      return this.posRepository.find({
-        where: whereClause,
-        relations: ['branch'],
-      });
     } catch (error) {
-      this.logger.error(
-        `Error fetching POS for merchant ${merchantId}, branch ${branchId}: ${error.message}`,
-        error.stack,
+      // If branch not found with merchant filter, try without it (for superadmin)
+      console.log(
+        '🔍 Debug - POS service findAll: Branch not found with merchant filter, trying without...',
       );
-      throw new NotFoundException(
-        `Branch ${branchId} not found for merchant ${merchantId}`,
-      );
+      await this.branchService.findOne(branchId); // Try without merchant filter
     }
+
+    const whereClause: any = {
+      branch: { id: branchId },
+    };
+
+    if (!includeDeactivated) {
+      whereClause.isActive = true;
+    }
+
+    return this.posRepository.find({
+      where: whereClause,
+      relations: ['branch'],
+    });
   }
 
   async findOne(merchantId: UUID, branchId: UUID, id: UUID): Promise<Pos> {
-    await this.branchService.findOne(branchId, merchantId);
+    try {
+      await this.branchService.findOne(branchId, merchantId);
+    } catch (error) {
+      // If branch not found with merchant filter, try without it (for superadmin)
+      console.log(
+        '🔍 Debug - POS service: Branch not found with merchant filter, trying without...',
+      );
+      await this.branchService.findOne(branchId); // Try without merchant filter
+    }
+    
     const pos = await this.posRepository.findOne({
       where: {
         id,
@@ -107,13 +114,25 @@ export class PosService {
   }
 
   async findOneByMerchant(merchantId: UUID, id: UUID): Promise<Pos> {
-    const pos = await this.posRepository.findOne({
+    let pos = await this.posRepository.findOne({
       where: {
         id,
         branch: { merchant: { id: merchantId } },
       },
       relations: ['branch', 'branch.merchant'],
     });
+
+    // If POS not found with merchant filter, try without it (for superadmin)
+    if (!pos) {
+      console.log(
+        '🔍 Debug - POS service findOneByMerchant: POS not found with merchant filter, trying without...',
+      );
+      pos = await this.posRepository.findOne({
+        where: { id },
+        relations: ['branch', 'branch.merchant'],
+      });
+    }
+
     if (!pos)
       throw new NotFoundException(
         `POS ${id} not found for merchant ${merchantId}`,

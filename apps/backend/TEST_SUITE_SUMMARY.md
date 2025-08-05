@@ -52,7 +52,27 @@ We've successfully created a comprehensive end-to-end test suite for the Zeppex 
 - ✅ **Merchant Management**: Basic CRUD operations
 - ✅ **Data Validation**: Basic validation rules
 
-### 4. `test/e2e/test-setup.ts`
+### 4. `test/e2e/hedera-integration.test.ts`
+**Purpose**: Tests Hedera blockchain integration including account creation, token operations, and real blockchain transactions
+
+**Key Test Scenarios**:
+- ✅ **Token Creation**: Creates Zeppex tokens on Hedera network via API
+- ✅ **Account Creation**: Automatic Hedera account creation for branches
+- ✅ **Token Minting**: Mints tokens to branch accounts with balance verification
+- ✅ **Payment Integration**: Full payment flow with blockchain integration
+- ✅ **Balance Verification**: Real-time HBAR and token balance validation
+- ✅ **Error Handling**: Graceful handling of network errors and invalid operations
+- ✅ **Authorization**: Role-based access control for blockchain operations
+
+**Test Coverage**:
+- Real blockchain transaction validation
+- Account ID format validation
+- Token metadata verification
+- Balance update tracking
+- Network error resilience
+- Complete end-to-end workflow validation
+
+### 5. `test/e2e/test-setup.ts`
 **Purpose**: Test helper utilities for data management
 
 **Features**:
@@ -151,9 +171,16 @@ pnpm test:e2e
 pnpm test:e2e:basic          # Basic functionality
 pnpm test:e2e:multi-tenant   # Multi-tenant architecture
 pnpm test:e2e:validation     # Validation rules
+pnpm test:e2e:hedera         # Hedera blockchain integration
 
-# Run with test runner script
-./run-tests.sh
+# Run with test runner scripts
+./run-tests.sh               # Standard E2E tests
+./test/e2e/run-hedera-tests.sh  # Hedera integration tests
+
+# Individual Hedera tests
+npm run test:hedera          # Basic Hedera connectivity
+npm run test:hedera-simple   # Token creation and transfer
+npm run test:hedera-debug    # Detailed debugging
 ```
 
 ## Test Environment
@@ -248,6 +275,55 @@ pnpm test:e2e:validation     # Validation rules
 4. **Development Speed**: Automated testing reduces manual verification time
 5. **Quality Assurance**: Comprehensive coverage of critical business logic
 6. **Security**: Validates security measures and access controls
+7. **Blockchain Integration**: Real validation of Hedera network operations
+8. **Production Readiness**: End-to-end testing of complete blockchain workflows
+
+## Hedera Blockchain Integration Testing
+
+### Real Blockchain Validation
+The Hedera integration tests provide comprehensive validation of blockchain operations:
+
+1. **Token Operations**:
+   - Real token creation on Hedera network
+   - Token metadata validation (name, symbol, decimals)
+   - Token minting with balance verification
+   - Token association with accounts
+
+2. **Account Management**:
+   - Automatic Hedera account creation for branches
+   - Account ID format validation
+   - Initial HBAR funding verification
+   - Public/private key pair generation
+
+3. **Transaction Validation**:
+   - Real blockchain transaction execution
+   - Transaction receipt validation
+   - Balance update verification
+   - Network error handling
+
+4. **Integration Testing**:
+   - API-to-blockchain workflow validation
+   - Payment flow with token integration
+   - Balance synchronization
+   - Error recovery mechanisms
+
+### Test Environment Requirements
+- **Hedera Credentials**: Valid account ID and private key
+- **Network Access**: Connection to Hedera testnet/mainnet
+- **Database**: PostgreSQL with test database
+- **Environment**: Proper .env.test configuration
+
+### Running Hedera Tests
+```bash
+# Automated test runner (recommended)
+./test/e2e/run-hedera-tests.sh
+
+# Individual test command
+npm run test:e2e:hedera
+
+# Basic connectivity test
+npm run test:hedera-simple
+```
 
 ## Future Enhancements
 

@@ -1,21 +1,19 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
+  PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Branch } from './branch.entity';
 import { Pos } from './pos.entity';
 import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
 @Entity('payment_orders')
 export class PaymentOrder {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('decimal', { precision: 18, scale: 8 })
@@ -37,6 +35,9 @@ export class PaymentOrder {
   @Column({ type: 'timestamp', nullable: true })
   deactivatedAt: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  completedAt: Date;
+
   @ManyToOne(() => Branch, { nullable: false, onDelete: 'CASCADE' })
   branch: Branch;
 
@@ -51,11 +52,6 @@ export class PaymentOrder {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @BeforeInsert()
-  generateId() {
-    this.id = uuidv4();
-  }
 
   isExpired(): boolean {
     return this.expiresAt ? new Date() > this.expiresAt : false;

@@ -101,7 +101,59 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=strong-password-here
 ADMIN_FIRST_NAME=Admin
 ADMIN_LAST_NAME=User
+
+# Hedera Configuration
+HEDERA_ACCOUNT_ID=0.0.xxxxx
+HEDERA_PRIVATE_KEY=0x...
+HEDERA_NETWORK=testnet
+
+# Token Configuration
+# Set to true to automatically deploy a new token on application startup
+DEPLOY_ZEPPEX_TOKEN=false
+
+# Token ID - must be configured after token deployment
+# This is the only source of truth for token configuration
+HEDERA_ZEPPEX_TOKEN_ID=0.0.xxxxx
 ```
+
+## Hedera Token Configuration
+
+The application uses Hedera Hashgraph for token operations. The token deployment and configuration follow a clear separation of concerns:
+
+### Architecture Overview
+
+1. **Token Deployment**: Creates new tokens on the Hedera network
+2. **Token Configuration**: Uses existing tokens via environment variables
+
+This separation ensures:
+- Token deployment is a one-time process
+- Token configuration is persistent and environment-specific
+- No risk of accidentally creating duplicate tokens
+- Clear audit trail of token deployment vs. usage
+
+### Quick Token Setup
+
+1. **Deploy a new token**:
+   ```bash
+   ./deploy-token.sh
+   ```
+
+2. **Manual deployment**:
+   ```bash
+   # Set deployment flag
+   DEPLOY_ZEPPEX_TOKEN=true npm run start:dev
+   
+   # Copy token ID from logs and update .env
+   HEDERA_ZEPPEX_TOKEN_ID=0.0.xxxxx
+   DEPLOY_ZEPPEX_TOKEN=false
+   ```
+
+3. **Restart the application**:
+   ```bash
+   npm run start:dev
+   ```
+
+For detailed token setup instructions, see [TOKEN_ENV_SETUP.md](TOKEN_ENV_SETUP.md).
 
 ## Authentication
 

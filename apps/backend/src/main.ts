@@ -105,6 +105,7 @@ async function bootstrap() {
     .addTag('payment-orders', 'Payment order processing')
     .addTag('transactions', 'Transaction management')
     .addTag('users', 'User management')
+    .addTag('treasury', 'Treasury and token management')
     .setVersion('1.0.0')
     .setContact('Zeppex Support', 'https://zeppex.com', 'support@zeppex.com')
     .setLicense('Proprietary', 'https://zeppex.com/license')

@@ -25,8 +25,10 @@ import {
   PublicPaymentController,
   SimplifiedPublicPaymentController,
 } from './controllers/public-payment.controller';
+import { TreasuryController } from './controllers/treasury.controller';
 import { AuthModule } from '../auth/auth.module';
 import { QrCodeModule } from '../shared/qr-code.module';
+import { HederaModule } from '../hedera/hedera.module';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { QrCodeModule } from '../shared/qr-code.module';
     BinanceClientModule,
     AuthModule,
     QrCodeModule,
+    HederaModule,
   ],
   providers: [MerchantService, BranchService, PosService, PaymentOrderService],
   controllers: [
@@ -47,6 +50,7 @@ import { QrCodeModule } from '../shared/qr-code.module';
     FullPublicPaymentOrderController,
     PublicPaymentController,
     SimplifiedPublicPaymentController,
+    TreasuryController,
   ],
   exports: [MerchantService, BranchService, PosService, PaymentOrderService],
 })

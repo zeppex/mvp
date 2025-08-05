@@ -15,6 +15,7 @@ import { TransactionModule } from './transactions/transaction.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { HederaModule } from './hedera/hedera.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -48,6 +49,13 @@ import * as Joi from 'joi';
         BINANCE_API_KEY: Joi.string().optional(),
         BINANCE_SECRET_KEY: Joi.string().optional(),
         BINANCE_API_URL: Joi.string().uri().optional(),
+
+        // Hedera configuration
+        HEDERA_ACCOUNT_ID: Joi.string().optional(),
+        HEDERA_PRIVATE_KEY: Joi.string().optional(),
+        HEDERA_NETWORK: Joi.string()
+          .valid('mainnet', 'testnet', 'previewnet')
+          .default('testnet'),
       }),
       validationOptions: {
         allowUnknown: true,
@@ -90,6 +98,7 @@ import * as Joi from 'joi';
     PaymentOrderModule,
     TransactionModule,
     HealthModule,
+    HederaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
