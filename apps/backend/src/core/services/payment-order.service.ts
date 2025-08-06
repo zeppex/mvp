@@ -419,6 +419,68 @@ export class PaymentOrderService {
     return order;
   }
 
+  async getCurrentByPosId(posId: UUID): Promise<PaymentOrder> {
+    this.logger.log(`Getting current payment order for POS: ${posId}`);
+
+    // First, verify the POS exists and is active
+    const pos = await this.posService.findOneByPosId(posId);
+
+    if (!pos.isActive) {
+      throw new NotFoundException(`POS ${posId} is not active`);
+    }
+
+    // Get the current active order for this POS
+    let order = await this.orderRepository.findOne({
+      where: {
+        pos: { id: posId },
+        status: PaymentOrderStatus.ACTIVE,
+      },
+      order: { createdAt: 'DESC' },
+      relations: ['pos'],
+    });
+
+    console.log('order found', order);
+
+    if (order && order.isExpired()) {
+      order.status = PaymentOrderStatus.EXPIRED;
+      await this.orderRepository.save(order);
+      this.logger.log(
+        `Payment order ${order.id} expired and was marked as EXPIRED`,
+      );
+      // Promote next queued order
+      const next = await this.getNextQueuedOrder(posId);
+      if (next) {
+        order = await this.activateQueuedOrder(next);
+        this.logger.log(`Promoted queued order ${order.id} to ACTIVE`);
+      } else {
+        throw new NotFoundException(`No active order for pos: ${posId}`);
+      }
+    }
+
+    if (!order) {
+      // No active order, try to promote next queued order
+      const next = await this.getNextQueuedOrder(posId);
+      if (next) {
+        order = await this.activateQueuedOrder(next);
+        this.logger.log(`Promoted queued order ${order.id} to ACTIVE`);
+      } else {
+        throw new NotFoundException(`No active order for pos: ${posId}`);
+      }
+    }
+
+    // Final check: if the order is still expired (shouldn't happen but just in case)
+    if (order && order.isExpired()) {
+      order.status = PaymentOrderStatus.EXPIRED;
+      await this.orderRepository.save(order);
+      this.logger.log(
+        `Payment order ${order.id} expired and was marked as EXPIRED`,
+      );
+      throw new NotFoundException(`No active order for pos: ${posId}`);
+    }
+
+    return order;
+  }
+
   async triggerInProgress(
     merchantId: UUID,
     branchId: UUID,

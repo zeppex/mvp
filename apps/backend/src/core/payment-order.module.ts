@@ -4,7 +4,6 @@ import { PaymentOrder } from './entities/payment-order.entity';
 import { PaymentOrderService } from './services/payment-order.service';
 import { PaymentOrderController } from './controllers/payment-order.controller';
 import { PublicPaymentOrderController } from './controllers/public-payment-order.controller';
-import { PublicPaymentController } from './controllers/public-payment.controller';
 import { CoreModule } from './core.module';
 
 @Module({
@@ -13,11 +12,7 @@ import { CoreModule } from './core.module';
     forwardRef(() => CoreModule),
   ],
   providers: [PaymentOrderService],
-  controllers: [
-    PaymentOrderController,
-    PublicPaymentOrderController,
-    PublicPaymentController,
-  ],
+  controllers: [PaymentOrderController, PublicPaymentOrderController],
   exports: [PaymentOrderService],
 })
 export class PaymentOrderModule {}

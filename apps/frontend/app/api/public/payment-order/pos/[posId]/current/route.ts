@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { posId } = await params;
-    const url = `${BACKEND_URL}/api/v1/public/pos/${posId}/orders/current`;
+    const url = `${BACKEND_URL}/api/v1/public/payment-order/pos/${posId}/current`;
 
     const apiRes = await fetch(url, {
       method: "GET",

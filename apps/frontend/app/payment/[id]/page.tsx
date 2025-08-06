@@ -66,7 +66,10 @@ export default function PaymentPage({
     const fetchPaymentOrder = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/public/payment-order/${id}`);
+        // The id parameter is actually a POS ID, so we need to get the current payment order for that POS
+        const response = await fetch(
+          `/api/public/payment-order/pos/${id}/current`
+        );
 
         if (!response.ok) {
           const errorData = await response.json();
