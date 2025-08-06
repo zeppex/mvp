@@ -84,7 +84,9 @@ export class Branch {
   }
 
   updateHbarBalance(balance: string): void {
-    this.hbarBalance = balance;
+    // Remove the "ℏ" symbol and convert to numeric string
+    const numericBalance = balance.replace('ℏ', '').trim();
+    this.hbarBalance = numericBalance;
     this.lastBalanceUpdate = new Date();
   }
 }

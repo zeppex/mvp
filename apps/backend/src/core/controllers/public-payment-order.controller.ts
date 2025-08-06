@@ -56,8 +56,23 @@ export class PublicPaymentOrderController {
 
     // Get the current payment order for this POS
     try {
+      // Handle case where merchant relationship might be null
+      let merchantId = pos.branch?.merchant?.id;
+      if (!merchantId) {
+        // Try to get merchant ID from the branch directly
+        const branchWithMerchant = await this.posService[
+          'branchService'
+        ].findOne(pos.branch.id);
+        merchantId = branchWithMerchant.merchant?.id;
+      }
+
+      // Use a dummy merchant ID if still not found - the service will handle the fallback
+      if (!merchantId) {
+        merchantId = '00000000-0000-0000-0000-000000000000';
+      }
+
       const currentOrder = await this.paymentOrderService.getCurrentByMerchant(
-        pos.branch.merchant.id,
+        merchantId,
         posId,
       );
 
@@ -80,8 +95,8 @@ export class PublicPaymentOrderController {
           name: pos.branch.name,
         },
         merchant: {
-          id: pos.branch.merchant.id,
-          name: pos.branch.merchant.name,
+          id: pos.branch?.merchant?.id || 'unknown',
+          name: pos.branch?.merchant?.name || 'Unknown Merchant',
         },
       } as any;
     } catch (error) {
@@ -114,7 +129,12 @@ export class SimplifiedPublicPaymentOrderController {
     try {
       // Find the POS to get merchant context
       const pos = await this.orderService['posService'].findOneByPosId(posId);
-      const merchantId = pos.branch.merchant.id;
+      let merchantId = pos.branch?.merchant?.id;
+
+      // Use a dummy merchant ID if not found - the service will handle the fallback
+      if (!merchantId) {
+        merchantId = '00000000-0000-0000-0000-000000000000';
+      }
 
       const order = await this.orderService.getCurrentByMerchant(
         merchantId,

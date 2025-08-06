@@ -33,12 +33,7 @@
     "migrate:generate": "typeorm migration:generate",
     "migrate:revert": "typeorm migration:revert",
     "seed": "ts-node src/shared/services/seed.service.ts",
-    "test:hedera": "node test-hedera.js",
-    "test:hedera-simple": "node test-hedera-simple.js",
-    "test:hedera-debug": "node test-hedera-debug.js",
-    "test:e2e:hedera": "jest --config ./test/jest-e2e.json --testPathPattern=\"hedera-integration.test.ts\" --testTimeout=120000 --forceExit --detectOpenHandles",
-    "test:token-env": "node test-token-env.js",
-    "test:swagger-auth": "node test-swagger-auth.js"
+    "test:e2e:hedera": "jest --config ./test/jest-e2e.json --testPathPattern=\"hedera-integration.test.ts\" --testTimeout=120000 --forceExit --detectOpenHandles"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.69.0",

@@ -29,11 +29,8 @@ export class BranchService {
     merchantId: string,
     createBranchDto: CreateBranchDto,
   ): Promise<Branch> {
-    console.log('🔍 Debug - Creating branch for merchant:', merchantId);
-
     // ensure merchant exists
     const merchant = await this.merchantService.findOne(merchantId);
-    console.log('🔍 Debug - Merchant found:', merchant.id, merchant.name);
 
     // Create Hedera account for the branch
     const accountInfo = await this.accountService.createBranchAccount(
@@ -62,18 +59,20 @@ export class BranchService {
     merchantId: string,
     includeDeactivated: boolean = false,
   ): Promise<Branch[]> {
-    const whereClause: any = {
-      merchant: { id: merchantId },
-    };
-
-    if (!includeDeactivated) {
-      whereClause.isActive = true;
-    }
-
-    return this.branchRepository.find({
-      where: whereClause,
+    // Since the merchant relationship is not properly set up in the database,
+    // we need to work around this by fetching all branches and filtering by name pattern
+    // This is a temporary fix until the database schema is properly migrated
+    const allBranches = await this.branchRepository.find({
       relations: ['merchant', 'pos'],
+      where: includeDeactivated ? {} : { isActive: true },
     });
+
+    // Filter branches by merchant ID using the merchant relationship
+    const branches = allBranches.filter(
+      (branch) => branch.merchant?.id === merchantId,
+    );
+
+    return branches;
   }
 
   async findOne(id: string, merchantId?: string): Promise<Branch> {
@@ -89,23 +88,11 @@ export class BranchService {
 
     // If branch not found with merchant filter, try without it (for superadmin)
     if (!branch && merchantId) {
-      console.log(
-        '🔍 Debug - Branch not found with merchant filter, trying without...',
-      );
       const fallbackQueryOptions: any = {
         where: { id },
         relations: ['merchant', 'pos'],
       };
       branch = await this.branchRepository.findOne(fallbackQueryOptions);
-
-      if (branch) {
-        console.log('🔍 Debug - Found branch without merchant filter:', {
-          id: branch.id,
-          name: branch.name,
-          merchant: branch.merchant?.id,
-          merchantRelation: branch.merchant ? 'loaded' : 'null',
-        });
-      }
     }
 
     if (!branch) {

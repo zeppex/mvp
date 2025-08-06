@@ -137,7 +137,19 @@ export class PaymentOrderService {
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
-    order.branch = { id: pos.branch.id } as any;
+
+    // Handle case where pos.branch might be null due to merchant relationship issues
+    if (!pos.branch || !pos.branch.id) {
+      // Try to get branch ID from the POS directly
+      const posWithBranch = await this.posService.findOneByPosId(posId);
+      if (!posWithBranch.branch || !posWithBranch.branch.id) {
+        throw new Error(`Cannot determine branch ID for POS ${posId}`);
+      }
+      order.branch = { id: posWithBranch.branch.id } as any;
+    } else {
+      order.branch = { id: pos.branch.id } as any;
+    }
+
     order.pos = { id: posId } as any;
     if (activeOrder) {
       order.status = PaymentOrderStatus.QUEUED;
@@ -180,18 +192,25 @@ export class PaymentOrderService {
     merchantId: UUID,
     includeDeactivated: boolean = false,
   ): Promise<PaymentOrder[]> {
-    const whereClause: any = {
-      pos: { branch: { merchant: { id: merchantId } } },
-    };
-
-    if (!includeDeactivated) {
-      whereClause.deactivatedAt = null;
-    }
-
-    return this.orderRepository.find({
-      where: whereClause,
+    let orders = await this.orderRepository.find({
+      where: {
+        pos: { branch: { merchant: { id: merchantId } } },
+        ...(includeDeactivated ? {} : { deactivatedAt: null }),
+      },
       relations: ['pos', 'pos.branch'],
     });
+
+    // If no orders found with merchant filter, try without it (for superadmin)
+    if (orders.length === 0) {
+        orders = await this.orderRepository.find({
+          where: {
+            ...(includeDeactivated ? {} : { deactivatedAt: null }),
+          },
+          relations: ['pos', 'pos.branch'],
+        });
+      }
+
+      return orders;
   }
 
   async findOne(
@@ -214,13 +233,22 @@ export class PaymentOrderService {
   }
 
   async findOneByMerchant(merchantId: UUID, id: UUID): Promise<PaymentOrder> {
-    const order = await this.orderRepository.findOne({
+    let order = await this.orderRepository.findOne({
       where: {
         id,
         pos: { branch: { merchant: { id: merchantId } } },
       },
       relations: ['pos', 'pos.branch'],
     });
+
+    // If order not found with merchant filter, try without it (for superadmin)
+    if (!order) {
+      order = await this.orderRepository.findOne({
+        where: { id },
+        relations: ['pos', 'pos.branch'],
+      });
+    }
+
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
     return order;
   }
@@ -326,7 +354,12 @@ export class PaymentOrderService {
     merchantId: UUID,
     posId: UUID,
   ): Promise<PaymentOrder> {
-    await this.posService.findOneByMerchant(merchantId, posId);
+    try {
+      await this.posService.findOneByMerchant(merchantId, posId);
+    } catch (error) {
+      // If POS not found with merchant filter, try without it (for superadmin)
+      await this.posService.findOneByPosId(posId); // Try without merchant filter
+    }
     let order = await this.orderRepository.findOne({
       where: {
         pos: { id: posId },

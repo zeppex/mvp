@@ -8,6 +8,7 @@ import {
   Request,
   HttpStatus,
   HttpException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -214,21 +215,20 @@ export class TreasuryController {
     description: 'Tokens minted successfully',
   })
   async mintTokensToBranch(
-    @Param('branchId') branchId: string,
+    @Param('branchId', new ParseUUIDPipe()) branchId: string,
     @Body() mintTokensDto: MintTokensDto,
     @Request() req,
   ) {
     let merchantId = req.user.merchant?.id;
 
+    // For superadmin, try to get merchant ID from query params first
+    if (!merchantId && req.user.role === UserRole.SUPERADMIN) {
+      merchantId = req.query.merchantId as string;
+    }
+
     // For superadmin, we need to get the merchant ID from the branch
     if (!merchantId && req.user.role === UserRole.SUPERADMIN) {
       const branch = await this.branchService.findOne(branchId);
-      console.log('🔍 Debug - Branch found:', {
-        id: branch.id,
-        name: branch.name,
-        merchant: branch.merchant,
-        merchantId: branch.merchant?.id,
-      });
 
       // Try to get merchant ID from the branch's merchantId column directly
       if (!branch.merchant) {
@@ -236,24 +236,16 @@ export class TreasuryController {
         const branchWithMerchant = await this.branchService.findOne(branchId);
 
         // If the branch service's findOne method still doesn't load the merchant,
-        // try a direct database query
+        // try a direct database query to get the merchantId column
         if (!branchWithMerchant.merchant) {
           const branchData = await this.branchRepository
             .createQueryBuilder('branch')
-            .select('branch.id, branch.name')
-            .addSelect('merchant.id', 'merchantId')
-            .leftJoin('branch.merchant', 'merchant')
+            .select('branch.id, branch.name, branch.merchantId')
             .where('branch.id = :branchId', { branchId })
             .getRawOne();
 
-          console.log('🔍 Debug - Raw query result:', branchData);
-
           if (branchData?.merchantId) {
             merchantId = branchData.merchantId;
-            console.log(
-              '🔍 Debug - Found merchant ID via raw query:',
-              merchantId,
-            );
           } else {
             throw new HttpException(
               'Branch merchant information not found',

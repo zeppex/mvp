@@ -174,7 +174,7 @@ describe('Payment Flow E2E Tests', () => {
       expect(response.body.name).toBe(`Test Payment Branch ${testSuffix}`);
 
       branchId = response.body.id;
-    });
+    }, 30000); // 30 second timeout for Hedera account creation
 
     it('should create a test POS with QR code', async () => {
       const response = await request(app.getHttpServer())
@@ -216,9 +216,8 @@ describe('Payment Flow E2E Tests', () => {
       expect(response.body.qrCodeUrl).toContain(
         'http://localhost:3000/payment/',
       );
-      expect(response.body.qrCodeImageUrl).toContain(
-        'chart.googleapis.com/chart?cht=qr',
-      );
+      // QR code images are now generated client-side, so imageUrl is null
+      expect(response.body.qrCodeImageUrl).toBeNull();
     });
 
     it('should update POS and regenerate QR code', async () => {
@@ -467,7 +466,6 @@ describe('Payment Flow E2E Tests', () => {
 
       // Log response statuses for debugging
       const statuses = responses.map((r) => r.status);
-      console.log('Rate limit test response statuses:', statuses);
 
       // Allow test to pass if all are 429 (rate limit), or at least one is 200 (success), or all are 404 (no active order)
       const successCount = responses.filter((r) => r.status === 200).length;

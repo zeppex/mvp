@@ -10,7 +10,7 @@ afterAll(async () => {
     }
   } catch (error) {
     // Connection might already be closed
-    console.log('Database connection cleanup:', error.message);
+
   }
 });
 

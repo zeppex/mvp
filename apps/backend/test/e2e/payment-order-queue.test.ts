@@ -104,7 +104,6 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(201);
 
       merchantId = response.body.id;
-      console.log('🔍 Debug - Merchant created:', merchantId);
     });
 
     it('should create merchant admin user', async () => {
@@ -120,8 +119,6 @@ describe('Payment Order Queue E2E Tests', () => {
           merchantId: merchantId,
         })
         .expect(201);
-
-      console.log('🔍 Debug - Merchant admin user created:', response.body.id);
     });
 
     it('should login as merchant admin', async () => {
@@ -134,10 +131,6 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(201);
 
       merchantAdminToken = response.body.accessToken;
-      console.log(
-        '🔍 Debug - Merchant admin logged in, token:',
-        merchantAdminToken ? 'present' : 'missing',
-      );
     });
 
     it('should create test branch', async () => {

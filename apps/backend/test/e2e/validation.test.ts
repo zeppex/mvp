@@ -110,7 +110,7 @@ describe('Validation E2E Tests', () => {
       });
 
     posId = posResponse.body.id;
-  });
+  }, 30000); // 30 second timeout for setup
 
   afterAll(async () => {
     await app.close();
@@ -276,7 +276,7 @@ describe('Validation E2E Tests', () => {
           merchantId: merchantId,
         })
         .expect(201);
-    });
+    }, 30000); // 30 second timeout for Hedera operations
   });
 
   describe('POS Validation', () => {
@@ -549,7 +549,7 @@ describe('Validation E2E Tests', () => {
         });
 
       testPosId = posResponse.body.id;
-    });
+    }, 30000); // 30 second timeout for setup (includes Hedera operations)
 
     it('should accept partial merchant update with valid data', async () => {
       await request(app.getHttpServer())

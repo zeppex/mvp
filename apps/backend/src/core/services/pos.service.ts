@@ -70,9 +70,6 @@ export class PosService {
       await this.branchService.findOne(branchId, merchantId);
     } catch (error) {
       // If branch not found with merchant filter, try without it (for superadmin)
-      console.log(
-        '🔍 Debug - POS service findAll: Branch not found with merchant filter, trying without...',
-      );
       await this.branchService.findOne(branchId); // Try without merchant filter
     }
 
@@ -95,9 +92,6 @@ export class PosService {
       await this.branchService.findOne(branchId, merchantId);
     } catch (error) {
       // If branch not found with merchant filter, try without it (for superadmin)
-      console.log(
-        '🔍 Debug - POS service: Branch not found with merchant filter, trying without...',
-      );
       await this.branchService.findOne(branchId); // Try without merchant filter
     }
     
@@ -124,9 +118,6 @@ export class PosService {
 
     // If POS not found with merchant filter, try without it (for superadmin)
     if (!pos) {
-      console.log(
-        '🔍 Debug - POS service findOneByMerchant: POS not found with merchant filter, trying without...',
-      );
       pos = await this.posRepository.findOne({
         where: { id },
         relations: ['branch', 'branch.merchant'],
