@@ -56,6 +56,9 @@ export class Branch {
   @Column({ type: 'timestamp', nullable: true })
   lastBalanceUpdate: Date;
 
+  @Column('uuid')
+  merchantId: string;
+
   @ManyToOne(() => Merchant, (merchant) => merchant.branches, {
     onDelete: 'CASCADE',
   })
@@ -79,7 +82,9 @@ export class Branch {
   }
 
   updateTokenBalance(balance: number): void {
-    this.zeppexTokenBalance = balance.toString();
+    // Convert from raw token units to human-readable format (divide by 10^6)
+    const humanReadableBalance = (balance / Math.pow(10, 6)).toString();
+    this.zeppexTokenBalance = humanReadableBalance;
     this.lastBalanceUpdate = new Date();
   }
 

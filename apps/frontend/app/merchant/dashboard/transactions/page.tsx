@@ -74,7 +74,100 @@ export default function TransactionsPage() {
           throw new Error("Failed to fetch transactions");
         }
         const data = await response.json();
-        setTransactions(data);
+
+        // If no transactions from API, use mock data for demonstration
+        if (data.length === 0) {
+          const mockTransactions: Transaction[] = [
+            {
+              id: "tx-001",
+              date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+              description: "Coffee and pastry purchase",
+              amount: "25.50",
+              status: "completed",
+              exchange: "Binance",
+              merchantId: "merchant-001",
+              branchId: "branch-001",
+              posId: "pos-001",
+              createdAt: new Date(
+                Date.now() - 2 * 60 * 60 * 1000
+              ).toISOString(),
+              updatedAt: new Date(
+                Date.now() - 2 * 60 * 60 * 1000
+              ).toISOString(),
+            },
+            {
+              id: "tx-002",
+              date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+              description: "Lunch special",
+              amount: "12.99",
+              status: "completed",
+              exchange: "Binance",
+              merchantId: "merchant-001",
+              branchId: "branch-001",
+              posId: "pos-001",
+              createdAt: new Date(
+                Date.now() - 4 * 60 * 60 * 1000
+              ).toISOString(),
+              updatedAt: new Date(
+                Date.now() - 4 * 60 * 60 * 1000
+              ).toISOString(),
+            },
+            {
+              id: "tx-003",
+              date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+              description: "Grocery items",
+              amount: "45.00",
+              status: "pending",
+              exchange: "Binance",
+              merchantId: "merchant-001",
+              branchId: "branch-001",
+              posId: "pos-001",
+              createdAt: new Date(
+                Date.now() - 6 * 60 * 60 * 1000
+              ).toISOString(),
+              updatedAt: new Date(
+                Date.now() - 6 * 60 * 60 * 1000
+              ).toISOString(),
+            },
+            {
+              id: "tx-004",
+              date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
+              description: "Failed payment attempt",
+              amount: "8.75",
+              status: "failed",
+              exchange: "Binance",
+              merchantId: "merchant-001",
+              branchId: "branch-001",
+              posId: "pos-001",
+              createdAt: new Date(
+                Date.now() - 8 * 60 * 60 * 1000
+              ).toISOString(),
+              updatedAt: new Date(
+                Date.now() - 8 * 60 * 60 * 1000
+              ).toISOString(),
+            },
+            {
+              id: "tx-005",
+              date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+              description: "Electronics purchase",
+              amount: "67.25",
+              status: "completed",
+              exchange: "Binance",
+              merchantId: "merchant-001",
+              branchId: "branch-001",
+              posId: "pos-001",
+              createdAt: new Date(
+                Date.now() - 24 * 60 * 60 * 1000
+              ).toISOString(),
+              updatedAt: new Date(
+                Date.now() - 24 * 60 * 60 * 1000
+              ).toISOString(),
+            },
+          ];
+          setTransactions(mockTransactions);
+        } else {
+          setTransactions(data);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {

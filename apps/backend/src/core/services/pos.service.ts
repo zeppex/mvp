@@ -36,6 +36,7 @@ export class PosService {
 
     const pos = this.posRepository.create({
       ...createPosDto,
+      branchId: branchId,
       branch: { id: branchId } as any,
     });
 
@@ -74,7 +75,7 @@ export class PosService {
     }
 
     const whereClause: any = {
-      branch: { id: branchId },
+      branchId: branchId,
     };
 
     if (!includeDeactivated) {
@@ -98,7 +99,7 @@ export class PosService {
     const pos = await this.posRepository.findOne({
       where: {
         id,
-        branch: { id: branchId },
+        branchId: branchId,
       },
       relations: ['branch'],
     });

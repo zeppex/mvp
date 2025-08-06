@@ -5,24 +5,22 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { branchId: string } }
+  { params }: { params: Promise<{ branchId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { branchId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/branches/${params.branchId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${session}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch(`${BACKEND_URL}/api/v1/branches/${branchId}`, {
+      headers: {
+        Authorization: `Bearer ${session}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -45,10 +43,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { branchId: string } }
+  { params }: { params: Promise<{ branchId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { branchId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -56,17 +55,14 @@ export async function PUT(
 
     const body = await request.json();
 
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/branches/${params.branchId}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }
-    );
+    const response = await fetch(`${BACKEND_URL}/api/v1/branches/${branchId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -89,16 +85,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { branchId: string } }
+  { params }: { params: Promise<{ branchId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { branchId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/branches/${params.branchId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/branches/${branchId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${session}`,

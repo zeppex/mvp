@@ -1,9 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect, use } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,7 +24,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import Link from "next/link"
+import Link from "next/link";
 
 interface PaymentOrder {
   id: string;
@@ -26,17 +39,22 @@ interface PaymentOrder {
     name: string;
     description: string;
   };
-  branch: {
+  branch?: {
     id: string;
     name: string;
   };
-  merchant: {
+  merchant?: {
     id: string;
     name: string;
   };
 }
 
-export default function PaymentPage({ params }: { params: { id: string } }) {
+export default function PaymentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -48,9 +66,7 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
     const fetchPaymentOrder = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `/api/public/payment-order/pos/${params.id}`
-        );
+        const response = await fetch(`/api/public/payment-order/${id}`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -66,10 +82,10 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
       }
     };
 
-    if (params.id) {
+    if (id) {
       fetchPaymentOrder();
     }
-  }, [params.id]);
+  }, [id]);
 
   const handleProceed = () => {
     if (!selectedExchange || !paymentOrder) return;
@@ -143,7 +159,9 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Merchant</p>
-                  <p className="font-medium">{paymentOrder.merchant.name}</p>
+                  <p className="font-medium">
+                    {paymentOrder.merchant?.name || "Unknown Merchant"}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Description</p>
@@ -191,9 +209,11 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
                 <Store className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">{paymentOrder.merchant.name}</p>
+                <p className="font-medium">
+                  {paymentOrder.merchant?.name || "Unknown Merchant"}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  {paymentOrder.branch.name}
+                  {paymentOrder.branch?.name || "Unknown Branch"}
                 </p>
               </div>
             </div>

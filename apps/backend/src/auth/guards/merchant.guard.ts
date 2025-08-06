@@ -65,8 +65,17 @@ export class MerchantGuard implements CanActivate {
     const merchantId =
       request.params?.merchantId ||
       request.body?.merchantId ||
-      request.query?.merchantId ||
-      request.params?.id; // Sometimes the merchant ID is just 'id' in the URL
+      request.query?.merchantId;
+
+    // Only treat 'id' as merchant ID for specific routes that expect merchant ID
+    // For branches/:id, pos/:id, etc., the 'id' is not a merchant ID
+    const route = request.route?.path;
+    if (
+      route &&
+      (route.includes('/merchants/') || route.includes('/admin/merchants/'))
+    ) {
+      return merchantId || request.params?.id || null;
+    }
 
     return merchantId || null;
   }

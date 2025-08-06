@@ -18,6 +18,21 @@ export function QRCode({
 }: QRCodeProps) {
   const { Image, Canvas, SVG } = useQRCode();
 
+  // Validate that we have a valid value
+  if (!value || value.trim() === "") {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-center bg-gray-100 rounded",
+          className
+        )}
+        style={{ width: size, height: size }}
+      >
+        <span className="text-gray-500 text-sm">No QR data</span>
+      </div>
+    );
+  }
+
   const options = {
     level,
     margin: 2,

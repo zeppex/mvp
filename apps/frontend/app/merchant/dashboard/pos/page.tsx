@@ -81,6 +81,14 @@ export default function PointOfSale() {
     fetchPosTerminals();
   }, []);
 
+  const resetForm = () => {
+    setAmount("");
+    setDescription("");
+    setCurrentOrder(null);
+    setShowQRCode(false);
+    setError(null);
+  };
+
   const handleGenerateQR = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
@@ -111,6 +119,7 @@ export default function PointOfSale() {
       }
 
       const order = await response.json();
+      console.log("Payment order created:", order);
       setCurrentOrder(order);
       setShowQRCode(true);
     } catch (err) {
@@ -319,26 +328,38 @@ export default function PointOfSale() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center p-6">
-            <div className="bg-white p-4 rounded-lg">
-              <QRCode
-                value={currentOrder?.paymentLink || ""}
-                size={192}
-                level="M"
-              />
-            </div>
-            <div className="mt-4 text-center">
-              <p className="font-semibold">${currentOrder?.amount}</p>
-              <p className="text-sm text-gray-500">
-                {currentOrder?.description}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Order ID: {currentOrder?.id}
-              </p>
-            </div>
+            {console.log("Current order:", currentOrder)}
+            {currentOrder?.paymentLink ? (
+              <>
+                <div className="bg-white p-4 rounded-lg">
+                  <QRCode
+                    value={currentOrder.paymentLink}
+                    size={192}
+                    level="M"
+                  />
+                </div>
+                <div className="mt-4 text-center">
+                  <p className="font-semibold">${currentOrder?.amount}</p>
+                  <p className="text-sm text-gray-500">
+                    {currentOrder?.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Order ID: {currentOrder?.id}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-muted-foreground">Loading payment link...</p>
+              </div>
+            )}
           </div>
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setShowQRCode(false)}>
               Close
+            </Button>
+            <Button variant="outline" onClick={resetForm}>
+              Create New Order
             </Button>
             <Button>Print QR Code</Button>
           </div>

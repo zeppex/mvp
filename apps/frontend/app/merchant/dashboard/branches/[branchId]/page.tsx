@@ -51,7 +51,6 @@ interface Branch {
 
 export default function BranchDetailPage() {
   const params = useParams();
-  const merchantId = params.merchantId as string;
   const branchId = params.branchId as string;
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,9 +59,7 @@ export default function BranchDetailPage() {
   useEffect(() => {
     const fetchBranch = async () => {
       try {
-        const response = await fetch(
-          `/api/branches/${branchId}?merchantId=${merchantId}`
-        );
+        const response = await fetch(`/api/merchant/branches/${branchId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch branch");
         }
@@ -75,10 +72,10 @@ export default function BranchDetailPage() {
       }
     };
 
-    if (branchId && merchantId) {
+    if (branchId) {
       fetchBranch();
     }
-  }, [branchId, merchantId]);
+  }, [branchId]);
 
   if (loading) {
     return (
@@ -98,7 +95,7 @@ export default function BranchDetailPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href={`/admin/dashboard/merchants/${merchantId}`}>
+            <Link href="/merchant/dashboard/branches">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -121,7 +118,7 @@ export default function BranchDetailPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href={`/admin/dashboard/merchants/${merchantId}`}>
+            <Link href="/merchant/dashboard/branches">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -134,9 +131,7 @@ export default function BranchDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link
-              href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/new`}
-            >
+            <Link href={`/merchant/dashboard/branches/${branchId}/pos/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Add POS Terminal
             </Link>
@@ -390,7 +385,7 @@ export default function BranchDetailPage() {
               branch.pos.map((pos) => (
                 <Link
                   key={pos.id}
-                  href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/${pos.id}`}
+                  href={`/merchant/dashboard/branches/${branchId}/pos/${pos.id}`}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                 >
                   <div className="space-y-1">
@@ -412,7 +407,7 @@ export default function BranchDetailPage() {
                 </p>
                 <Button variant="outline" size="sm" className="mt-2" asChild>
                   <Link
-                    href={`/admin/dashboard/merchants/${merchantId}/branches/${branchId}/pos/new`}
+                    href={`/merchant/dashboard/branches/${branchId}/pos/new`}
                   >
                     Add POS Terminal
                   </Link>

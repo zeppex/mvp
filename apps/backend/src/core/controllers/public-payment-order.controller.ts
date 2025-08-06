@@ -33,6 +33,63 @@ export class PublicPaymentOrderController {
     private readonly posService: PosService,
   ) {}
 
+  @Get(':orderId')
+  @ApiOperation({ summary: 'Get payment order by ID (public)' })
+  @ApiParam({
+    name: 'orderId',
+    description: 'Payment Order ID',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the payment order.',
+    type: PaymentOrder,
+  })
+  @ApiResponse({ status: 404, description: 'Payment order not found.' })
+  async getPaymentOrderById(
+    @Param('orderId', new ParseUUIDPipe()) orderId: UUID,
+  ): Promise<PaymentOrder> {
+    this.logger.log(`Getting payment order by ID: ${orderId}`);
+
+    try {
+      // Get the payment order by ID
+      const order = await this.paymentOrderService.findOneById(orderId);
+
+      // Get the POS details
+      const pos = await this.posService.findOneByPosId(order.posId);
+
+      // Return only the necessary information for the public payment page
+      return {
+        id: order.id,
+        amount: order.amount,
+        currency: 'USD', // Default currency since it's not stored in the entity
+        description: order.description,
+        status: order.status,
+        createdAt: order.createdAt,
+        expiresAt: order.expiresAt,
+        expiresIn: order.expiresAt
+          ? Math.max(0, order.expiresAt.getTime() - Date.now())
+          : null,
+        pos: {
+          id: pos.id,
+          name: pos.name,
+          description: pos.description,
+        },
+        branch: {
+          id: pos.branch.id,
+          name: pos.branch.name,
+        },
+        merchant: {
+          id: pos.branch?.merchant?.id || 'unknown',
+          name: pos.branch?.merchant?.name || 'Unknown Merchant',
+        },
+      } as any;
+    } catch (error) {
+      this.logger.log(`Payment order not found: ${orderId}`);
+      throw new NotFoundException(`Payment order not found`);
+    }
+  }
+
   @Get('pos/:posId')
   @ApiOperation({ summary: 'Get current payment order for a POS (public)' })
   @ApiParam({ name: 'posId', description: 'POS ID', type: 'string' })

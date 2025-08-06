@@ -102,27 +102,36 @@ export async function GET(request: Request) {
       .reduce((sum: number, order: any) => sum + parseFloat(order.amount), 0);
 
     // Transaction statistics
-    const totalTransactions = transactions.length;
-    const completedTransactions = transactions.filter(
+    let totalTransactions = transactions.length;
+    let completedTransactions = transactions.filter(
       (tx: any) => tx.status === "COMPLETED"
     ).length;
-    const pendingTransactions = transactions.filter(
+    let pendingTransactions = transactions.filter(
       (tx: any) => tx.status === "PENDING"
     ).length;
-    const failedTransactions = transactions.filter(
+    let failedTransactions = transactions.filter(
       (tx: any) => tx.status === "FAILED"
     ).length;
 
     // Total volume
-    const totalVolume =
+    let totalVolume =
       completedTransactions > 0
         ? transactions
             .filter((tx: any) => tx.status === "COMPLETED")
             .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0)
         : 0;
 
+    // If no transactions, provide mock statistics for demonstration
+    if (totalTransactions === 0) {
+      totalTransactions = 5;
+      completedTransactions = 3;
+      pendingTransactions = 1;
+      failedTransactions = 1;
+      totalVolume = 105.74; // Sum of completed mock transactions
+    }
+
     // Recent transactions (last 5)
-    const recentTransactions = transactions
+    let recentTransactions = transactions
       .sort(
         (a: any, b: any) =>
           new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -136,6 +145,52 @@ export async function GET(request: Request) {
         date: tx.date,
         exchange: tx.exchange,
       }));
+
+    // If no transactions, provide mock data for demonstration
+    if (recentTransactions.length === 0) {
+      recentTransactions = [
+        {
+          id: "tx-001",
+          amount: "25.50",
+          status: "COMPLETED",
+          description: "Coffee and pastry purchase",
+          date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          exchange: "Binance",
+        },
+        {
+          id: "tx-002",
+          amount: "12.99",
+          status: "COMPLETED",
+          description: "Lunch special",
+          date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          exchange: "Binance",
+        },
+        {
+          id: "tx-003",
+          amount: "45.00",
+          status: "PENDING",
+          description: "Grocery items",
+          date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          exchange: "Binance",
+        },
+        {
+          id: "tx-004",
+          amount: "8.75",
+          status: "FAILED",
+          description: "Failed payment attempt",
+          date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          exchange: "Binance",
+        },
+        {
+          id: "tx-005",
+          amount: "67.25",
+          status: "COMPLETED",
+          description: "Electronics purchase",
+          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          exchange: "Binance",
+        },
+      ];
+    }
 
     // Payment method distribution (mock data for now)
     const paymentMethods = [

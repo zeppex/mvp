@@ -71,6 +71,62 @@ export class TransactionService {
     }
   }
 
+  async createCompleted(dto: CreateTransactionDto): Promise<Transaction> {
+    const { merchantId, branchId, posId, ...rest } = dto;
+
+    try {
+      // Verify the merchant exists
+      const merchant = await this.merchantService.findOne(merchantId);
+
+      // Verify the branch exists and belongs to the merchant
+      await this.branchService.findOne(branchId, merchantId);
+
+      // Verify the POS exists and belongs to the branch
+      await this.posService.findOne(merchantId, branchId, posId);
+
+      const transaction = this.transactionRepository.create({
+        ...rest,
+        merchantId,
+        branchId,
+        posId,
+        status: TransactionStatus.COMPLETED,
+        exchange: ExchangeType.BINANCE, // Default to Binance
+        date: new Date(),
+      });
+
+      const savedTransaction =
+        await this.transactionRepository.save(transaction);
+
+      // Mint Zeppex tokens to the branch for completed transaction
+      try {
+        const tokenAmount = this.calculateTokenAmount(savedTransaction.amount);
+        await this.branchService.mintTokensToBranch(
+          savedTransaction.branchId,
+          tokenAmount,
+          `Transaction completion for ${savedTransaction.id}`,
+        );
+
+        this.logger.log(
+          `Minted ${tokenAmount} ZEPPEX tokens to branch ${savedTransaction.branchId} for transaction ${savedTransaction.id}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to mint tokens for transaction ${savedTransaction.id}: ${error.message}`,
+        );
+        // Don't fail the transaction creation if token minting fails
+      }
+
+      this.logger.log(`Completed transaction created: ${savedTransaction.id}`);
+      return savedTransaction;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create completed transaction: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   async findAll(merchantId?: UUID): Promise<Transaction[]> {
     try {
       // If a merchantId is provided, only return transactions for that merchant
@@ -130,10 +186,35 @@ export class TransactionService {
   ): Promise<Transaction> {
     try {
       const transaction = await this.findOne(id, merchantId);
+      const previousStatus = transaction.status;
 
       transaction.status = status;
       const updatedTransaction =
         await this.transactionRepository.save(transaction);
+
+      // If transaction is being completed, mint Zeppex tokens to the branch
+      if (
+        status === TransactionStatus.COMPLETED &&
+        previousStatus !== TransactionStatus.COMPLETED
+      ) {
+        try {
+          const tokenAmount = this.calculateTokenAmount(transaction.amount);
+          await this.branchService.mintTokensToBranch(
+            transaction.branchId,
+            tokenAmount,
+            `Transaction completion for ${transaction.id}`,
+          );
+
+          this.logger.log(
+            `Minted ${tokenAmount} ZEPPEX tokens to branch ${transaction.branchId} for transaction ${transaction.id}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to mint tokens for transaction ${transaction.id}: ${error.message}`,
+          );
+          // Don't fail the transaction completion if token minting fails
+        }
+      }
 
       this.logger.log(`Transaction ${id} status updated to: ${status}`);
       return updatedTransaction;
@@ -144,6 +225,42 @@ export class TransactionService {
       );
       throw error;
     }
+  }
+
+  // Helper: calculate token amount based on transaction amount
+  private calculateTokenAmount(transactionAmount: string): number {
+    // Convert transaction amount to tokens with 6 decimals
+    // 1 dollar = 1,000,000 token units (6 decimals)
+    const amountInDollars = parseFloat(transactionAmount);
+    return Math.floor(amountInDollars * 1000000); // 1:1 ratio with 6 decimals
+  }
+
+  async completeMultipleTransactions(
+    transactionIds: UUID[],
+    merchantId?: UUID,
+  ): Promise<Transaction[]> {
+    const completedTransactions: Transaction[] = [];
+
+    for (const transactionId of transactionIds) {
+      try {
+        const completedTransaction = await this.updateStatus(
+          transactionId,
+          TransactionStatus.COMPLETED,
+          merchantId,
+        );
+        completedTransactions.push(completedTransaction);
+      } catch (error) {
+        this.logger.error(
+          `Failed to complete transaction ${transactionId}: ${error.message}`,
+        );
+        // Continue with other transactions even if one fails
+      }
+    }
+
+    this.logger.log(
+      `Completed ${completedTransactions.length} out of ${transactionIds.length} transactions`,
+    );
+    return completedTransactions;
   }
 
   async remove(id: UUID, merchantId?: UUID): Promise<void> {

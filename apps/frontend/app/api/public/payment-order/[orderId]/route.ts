@@ -4,11 +4,16 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ posId: string }> }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { posId } = await params;
-    const url = `${BACKEND_URL}/api/v1/public/pos/${posId}/orders/current`;
+    const { orderId } = await params;
+
+    // First, we need to get the payment order details from the backend
+    // Since there's no public endpoint for fetching by order ID, we'll need to create one
+    // For now, let's use the existing endpoint structure but we'll need to modify the backend
+
+    const url = `${BACKEND_URL}/api/v1/public/payment-order/${orderId}`;
 
     const apiRes = await fetch(url, {
       method: "GET",

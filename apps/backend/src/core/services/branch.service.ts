@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +16,8 @@ import { AccountId } from '@hashgraph/sdk';
 
 @Injectable()
 export class BranchService {
+  private readonly logger = new Logger(BranchService.name);
+
   constructor(
     @InjectRepository(Branch)
     private readonly branchRepository: Repository<Branch>,
@@ -40,6 +43,7 @@ export class BranchService {
 
     const branch = this.branchRepository.create({
       ...createBranchDto,
+      merchantId: merchantId,
       merchant: { id: merchantId } as any,
       hederaAccountId: accountInfo.accountId,
       hederaPublicKey: accountInfo.publicKey,
@@ -48,9 +52,10 @@ export class BranchService {
 
     const savedBranch = await this.branchRepository.save(branch);
 
-    // Update merchant's total balances
-    merchant.updateTotalBalances();
-    await this.merchantService.update(merchantId, merchant);
+    // Note: We don't update merchant's total balances here because:
+    // 1. A new branch won't have any balances yet
+    // 2. This avoids cascade issues with existing branches that might have null merchantId
+    // 3. Balances will be updated when actual transactions occur
 
     return savedBranch;
   }
@@ -59,41 +64,31 @@ export class BranchService {
     merchantId: string,
     includeDeactivated: boolean = false,
   ): Promise<Branch[]> {
-    // Since the merchant relationship is not properly set up in the database,
-    // we need to work around this by fetching all branches and filtering by name pattern
-    // This is a temporary fix until the database schema is properly migrated
-    const allBranches = await this.branchRepository.find({
-      relations: ['merchant', 'pos'],
-      where: includeDeactivated ? {} : { isActive: true },
-    });
+    const whereCondition: any = { merchantId };
 
-    // Filter branches by merchant ID using the merchant relationship
-    const branches = allBranches.filter(
-      (branch) => branch.merchant?.id === merchantId,
-    );
+    if (!includeDeactivated) {
+      whereCondition.isActive = true;
+    }
+
+    const branches = await this.branchRepository.find({
+      relations: ['merchant', 'pos'],
+      where: whereCondition,
+    });
 
     return branches;
   }
 
   async findOne(id: string, merchantId?: string): Promise<Branch> {
-    const queryOptions: any = { where: { id } };
+    const queryOptions: any = {
+      where: { id },
+      relations: ['merchant', 'pos'],
+    };
 
     if (merchantId) {
-      queryOptions.where.merchant = { id: merchantId };
+      queryOptions.where.merchantId = merchantId;
     }
 
-    queryOptions.relations = ['merchant', 'pos'];
-
-    let branch = await this.branchRepository.findOne(queryOptions);
-
-    // If branch not found with merchant filter, try without it (for superadmin)
-    if (!branch && merchantId) {
-      const fallbackQueryOptions: any = {
-        where: { id },
-        relations: ['merchant', 'pos'],
-      };
-      branch = await this.branchRepository.findOne(fallbackQueryOptions);
-    }
+    const branch = await this.branchRepository.findOne(queryOptions);
 
     if (!branch) {
       throw new NotFoundException(`Branch ${id} not found`);
@@ -140,10 +135,16 @@ export class BranchService {
       }
     }
 
-    // Update merchant's total balances
-    const merchant = await this.merchantService.findOne(branch.merchant.id);
-    merchant.updateTotalBalances();
-    await this.merchantService.update(merchant.id, merchant);
+    // Update merchant's total balances (only if merchant exists)
+    try {
+      const merchant = await this.merchantService.findOne(branch.merchant.id);
+      merchant.updateTotalBalances();
+      await this.merchantService.update(merchant.id, merchant);
+    } catch (error) {
+      this.logger.warn(
+        `Could not update merchant balances after branch removal: ${error.message}`,
+      );
+    }
   }
 
   async updateBranchBalance(branchId: string): Promise<Branch> {

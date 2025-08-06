@@ -202,15 +202,15 @@ export class PaymentOrderService {
 
     // If no orders found with merchant filter, try without it (for superadmin)
     if (orders.length === 0) {
-        orders = await this.orderRepository.find({
-          where: {
-            ...(includeDeactivated ? {} : { deactivatedAt: null }),
-          },
-          relations: ['pos', 'pos.branch'],
-        });
-      }
+      orders = await this.orderRepository.find({
+        where: {
+          ...(includeDeactivated ? {} : { deactivatedAt: null }),
+        },
+        relations: ['pos', 'pos.branch'],
+      });
+    }
 
-      return orders;
+    return orders;
   }
 
   async findOne(
@@ -228,6 +228,16 @@ export class PaymentOrderService {
       },
       relations: ['pos'],
     });
+    if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
+    return order;
+  }
+
+  async findOneById(id: UUID): Promise<PaymentOrder> {
+    const order = await this.orderRepository.findOne({
+      where: { id },
+      relations: ['pos', 'pos.branch'],
+    });
+
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
     return order;
   }

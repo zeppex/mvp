@@ -5,6 +5,8 @@ import {
   TokenSupplyType,
   TokenAssociateTransaction,
   TransferTransaction,
+  TokenMintTransaction,
+  TokenInfoQuery,
   TokenId,
   AccountId,
   PrivateKey,
@@ -95,11 +97,26 @@ export class TokenService {
     const treasuryPrivateKey = this.hederaService.getTreasuryPrivateKey();
 
     try {
-      // Transfer tokens from treasury to the target account following documentation pattern
+      // Mint new tokens to the treasury first, then transfer to the target account
+      const tokenMintTx = await new TokenMintTransaction()
+        .setTokenId(tokenId)
+        .setAmount(amount)
+        .setTransactionMemo(memo || 'Zeppex token mint')
+        .freezeWith(client)
+        .sign(treasuryPrivateKey);
+
+      const tokenMintSubmit = await tokenMintTx.execute(client);
+      const tokenMintRx = await tokenMintSubmit.getReceipt(client);
+
+      if (tokenMintRx.status !== Status.Success) {
+        throw new Error(`Token mint failed with status: ${tokenMintRx.status}`);
+      }
+
+      // Now transfer the newly minted tokens to the target account
       const tokenTransferTx = await new TransferTransaction()
         .addTokenTransfer(tokenId, treasuryAccountId, -amount)
         .addTokenTransfer(tokenId, accountId, amount)
-        .setTransactionMemo(memo || 'Zeppex token mint')
+        .setTransactionMemo(memo || 'Zeppex token transfer')
         .freezeWith(client)
         .sign(treasuryPrivateKey);
 
@@ -108,7 +125,7 @@ export class TokenService {
 
       if (tokenTransferRx.status !== Status.Success) {
         throw new Error(
-          `Token mint failed with status: ${tokenTransferRx.status}`,
+          `Token transfer failed with status: ${tokenTransferRx.status}`,
         );
       }
 
@@ -217,15 +234,27 @@ export class TokenService {
 
   async getTokenInfo(): Promise<TokenInfo | null> {
     try {
+      const client = this.hederaService.getClient();
       const tokenId = this.hederaService.getZeppexTokenId();
       const treasuryAccountId = this.hederaService.getTreasuryAccountId();
 
+      // Query token info from the network
+      const tokenInfoQuery = new TokenInfoQuery().setTokenId(tokenId);
+
+      const tokenInfo = await tokenInfoQuery.execute(client);
+
+      // Convert total supply to human-readable format
+      const totalSupplyRaw = tokenInfo.totalSupply?.toString() || '0';
+      const totalSupplyHuman = (
+        parseFloat(totalSupplyRaw) / Math.pow(10, tokenInfo.decimals || 6)
+      ).toString();
+
       return {
         tokenId: tokenId.toString(),
-        name: 'Zeppex Token',
-        symbol: 'ZEPPEX',
-        decimals: 6,
-        totalSupply: '0', // This would need to be queried from the network
+        name: tokenInfo.name || 'Zeppex Token',
+        symbol: tokenInfo.symbol || 'ZEPPEX',
+        decimals: tokenInfo.decimals || 6,
+        totalSupply: totalSupplyHuman,
         treasuryAccountId: treasuryAccountId.toString(),
       };
     } catch (error) {

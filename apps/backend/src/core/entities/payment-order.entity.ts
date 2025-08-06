@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -38,10 +39,18 @@ export class PaymentOrder {
   @Column({ type: 'timestamp', nullable: true })
   completedAt: Date;
 
+  @Column('uuid')
+  branchId: string;
+
+  @Column('uuid')
+  posId: string;
+
   @ManyToOne(() => Branch, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'branchId' })
   branch: Branch;
 
   @ManyToOne(() => Pos, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'posId' })
   pos: Pos;
 
   @OneToMany('Transaction', (tx: any) => tx.paymentOrder)
