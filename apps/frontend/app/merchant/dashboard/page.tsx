@@ -238,7 +238,7 @@ export default function MerchantDashboard() {
                   ${stats.transactions.totalVolume}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Total completed transactions
+                  Total completed payment orders
                 </p>
               </CardContent>
             </Card>

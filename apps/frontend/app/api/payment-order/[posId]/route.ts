@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server"
 import { getPaymentOrder } from "@/lib/payment-db"
 
-export async function GET(request: Request, { params }: { params: { posId: string } }) {
-  const { posId } = params
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ posId: string }> }
+) {
+  const { posId } = await params;
 
   // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const order = await getPaymentOrder(posId)
+  const order = await getPaymentOrder(posId);
 
   if (!order) {
-    return NextResponse.json({ message: "Payment order not found" }, { status: 404 })
+    return NextResponse.json(
+      { message: "Payment order not found" },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json(order, {
@@ -20,5 +26,5 @@ export async function GET(request: Request, { params }: { params: { posId: strin
       // the function re-runs in the background to update the cache.
       "Cache-Control": "s-maxage=3, stale-while-revalidate=29",
     },
-  })
+  });
 }

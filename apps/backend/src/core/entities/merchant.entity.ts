@@ -1,18 +1,16 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
+  PrimaryGeneratedColumn,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Branch } from './branch.entity';
 
 @Entity('merchants')
 export class Merchant {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
@@ -36,6 +34,16 @@ export class Merchant {
   @Column({ default: true })
   isActive: boolean;
 
+  // Token balance summary
+  @Column({ type: 'decimal', precision: 18, scale: 8, default: '0' })
+  totalZeppexTokenBalance: string;
+
+  @Column({ type: 'decimal', precision: 18, scale: 8, default: '0' })
+  totalHbarBalance: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastBalanceUpdate: Date;
+
   @OneToMany(() => Branch, (branch) => branch.merchant, { cascade: true })
   branches: Branch[];
 
@@ -45,8 +53,18 @@ export class Merchant {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @BeforeInsert()
-  generateId() {
-    this.id = uuidv4();
+  updateTotalBalances(): void {
+    const totalTokenBalance = this.branches.reduce(
+      (sum, branch) => sum + parseFloat(branch.zeppexTokenBalance || '0'),
+      0,
+    );
+    const totalHbarBalance = this.branches.reduce(
+      (sum, branch) => sum + parseFloat(branch.hbarBalance || '0'),
+      0,
+    );
+
+    this.totalZeppexTokenBalance = totalTokenBalance.toString();
+    this.totalHbarBalance = totalHbarBalance.toString();
+    this.lastBalanceUpdate = new Date();
   }
 }

@@ -19,6 +19,9 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  ExternalLink,
+  Wallet,
+  Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -34,6 +37,10 @@ interface Branch {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  hederaAccountId?: string;
+  zeppexTokenBalance?: string;
+  hbarBalance?: string;
+  lastBalanceUpdate?: string;
   pos?: Array<{
     id: string;
     name: string;
@@ -158,7 +165,7 @@ export default function BranchDetailPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -193,6 +200,22 @@ export default function BranchDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">$0.00</div>
             <p className="text-xs text-muted-foreground">No volume yet</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Zeppex Balance
+            </CardTitle>
+            <Coins className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {branch.zeppexTokenBalance
+                ? parseFloat(branch.zeppexTokenBalance).toLocaleString()
+                : "0"}
+            </div>
+            <p className="text-xs text-muted-foreground">ZEPPEX tokens</p>
           </CardContent>
         </Card>
         <Card>
@@ -281,6 +304,77 @@ export default function BranchDetailPage() {
                   {new Date(branch.updatedAt).toLocaleDateString()}
                 </p>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Hedera Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                Hedera Account Information
+              </div>
+
+              {branch.hederaAccountId ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      Account ID
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {branch.hederaAccountId}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        className="h-6 w-6 p-0"
+                      >
+                        <a
+                          href={`https://hashscan.io/testnet/account/${branch.hederaAccountId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Coins className="h-4 w-4 text-muted-foreground" />
+                      Zeppex Token Balance
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {branch.zeppexTokenBalance
+                        ? `${parseFloat(
+                            branch.zeppexTokenBalance
+                          ).toLocaleString()} ZEPPEX`
+                        : "0 ZEPPEX"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No Hedera account information available
+                </p>
+              )}
+
+              {branch.lastBalanceUpdate && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    Last Balance Update
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(branch.lastBalanceUpdate).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

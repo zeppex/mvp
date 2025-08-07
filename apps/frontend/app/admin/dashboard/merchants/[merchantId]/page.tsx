@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -56,6 +56,8 @@ interface Merchant {
 
 export default function MerchantDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const merchantId = params.merchantId as string;
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,8 +71,12 @@ export default function MerchantDetailPage() {
           throw new Error("Failed to fetch merchant");
         }
         const data = await response.json();
-        console.log("Merchant data received:", data);
         setMerchant(data);
+
+        // If this was a refresh request, clean up the URL
+        if (searchParams.get("refresh") === "true") {
+          router.replace(`/admin/dashboard/merchants/${merchantId}`);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -81,7 +87,7 @@ export default function MerchantDetailPage() {
     if (merchantId) {
       fetchMerchant();
     }
-  }, [merchantId]);
+  }, [merchantId, searchParams.get("refresh"), router]);
 
   if (loading) {
     return (

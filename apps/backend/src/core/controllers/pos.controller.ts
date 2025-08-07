@@ -137,7 +137,11 @@ export class PosController {
     // If still no merchantId and user is superadmin, find the POS first to get merchant context
     if (!merchantId && req.user.role === 'superadmin') {
       const pos = await this.posService.findOneByPosId(id);
-      merchantId = pos.branch.merchant.id;
+      merchantId = pos.branch?.merchant?.id;
+      if (!merchantId) {
+        // Try to get merchant ID from query params as fallback
+        merchantId = req.query.merchantId as string;
+      }
     }
 
     if (!merchantId) {
@@ -173,7 +177,11 @@ export class PosController {
     // If still no merchantId and user is superadmin, find the POS first to get merchant context
     if (!merchantId && req.user.role === 'superadmin') {
       const pos = await this.posService.findOneByPosId(id);
-      merchantId = pos.branch.merchant.id;
+      merchantId = pos.branch?.merchant?.id;
+      if (!merchantId) {
+        // Try to get merchant ID from query params as fallback
+        merchantId = req.query.merchantId as string;
+      }
     }
 
     if (!merchantId) {
@@ -239,9 +247,19 @@ export class PosController {
     const pos = await this.posService.findOneByMerchant(merchantId, id);
 
     // Get QR code information
+    let branchId = pos.branch?.id;
+    if (!branchId) {
+      // If branch relationship is null, try to get it from the POS directly
+      const posWithBranch = await this.posService.findOneByPosId(id);
+      branchId = posWithBranch.branch?.id;
+      if (!branchId) {
+        throw new Error(`Cannot determine branch ID for POS ${id}`);
+      }
+    }
+
     const qrCodeInfo = await this.posService.getQrCode(
       merchantId,
-      pos.branch.id,
+      branchId,
       id,
     );
 

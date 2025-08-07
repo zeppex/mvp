@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
+import HederaInfo from "@/components/admin/hedera-info";
 
 interface DashboardStats {
   merchants: {
@@ -301,6 +302,9 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Hedera Network Information */}
+      <HederaInfo />
     </div>
   );
 }

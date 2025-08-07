@@ -107,7 +107,7 @@ describe('Payment Order Queue E2E Tests', () => {
     });
 
     it('should create merchant admin user', async () => {
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .post('/api/v1/admin/users')
         .set('Authorization', `Bearer ${superadminToken}`)
         .send({
@@ -146,7 +146,7 @@ describe('Payment Order Queue E2E Tests', () => {
         .expect(201);
 
       branchId = response.body.id;
-    });
+    }, 30000); // 30 second timeout for Hedera account creation
 
     it('should create test POS', async () => {
       const response = await request(app.getHttpServer())

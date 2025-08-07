@@ -1,20 +1,19 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
+  PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Merchant } from './merchant.entity';
 import { Pos } from './pos.entity';
 
 @Entity('branches')
 export class Branch {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
@@ -38,9 +37,32 @@ export class Branch {
   @Column({ type: 'timestamp', nullable: true })
   deactivatedAt: Date;
 
+  // Hedera account information
+  @Column({ nullable: true })
+  hederaAccountId: string;
+
+  @Column({ nullable: true })
+  hederaPublicKey: string;
+
+  @Column({ nullable: true })
+  hederaPrivateKey: string;
+
+  @Column({ type: 'decimal', precision: 18, scale: 8, default: '0' })
+  zeppexTokenBalance: string;
+
+  @Column({ type: 'decimal', precision: 18, scale: 8, default: '0' })
+  hbarBalance: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastBalanceUpdate: Date;
+
+  @Column('uuid')
+  merchantId: string;
+
   @ManyToOne(() => Merchant, (merchant) => merchant.branches, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'merchantId' })
   merchant: Merchant;
 
   @OneToMany(() => Pos, (pos) => pos.branch)
@@ -52,15 +74,24 @@ export class Branch {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @BeforeInsert()
-  generateId() {
-    this.id = uuidv4();
-  }
-
   deactivate(): void {
     this.isActive = false;
     this.deactivatedAt = new Date();
     this.originalName = this.name;
     this.name = `${this.name}-DEACTIVATED`;
+  }
+
+  updateTokenBalance(balance: number): void {
+    // Convert from raw token units to human-readable format (divide by 10^6)
+    const humanReadableBalance = (balance / Math.pow(10, 6)).toString();
+    this.zeppexTokenBalance = humanReadableBalance;
+    this.lastBalanceUpdate = new Date();
+  }
+
+  updateHbarBalance(balance: string): void {
+    // Remove the "ℏ" symbol and convert to numeric string
+    const numericBalance = balance.replace('ℏ', '').trim();
+    this.hbarBalance = numericBalance;
+    this.lastBalanceUpdate = new Date();
   }
 }

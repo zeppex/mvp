@@ -5,9 +5,10 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(
   request: Request,
-  { params }: { params: { branchId: string } }
+  { params }: { params: Promise<{ branchId: string }> }
 ) {
-  const session = cookies().get("session")?.value;
+  const { branchId } = await params;
+  const session = (await cookies()).get("session")?.value;
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const merchantId = searchParams.get("merchantId");
 
-    let url = `${BACKEND_URL}/api/v1/branches/${params.branchId}`;
+    let url = `${BACKEND_URL}/api/v1/branches/${branchId}`;
     if (merchantId) {
       url += `?merchantId=${merchantId}`;
     }

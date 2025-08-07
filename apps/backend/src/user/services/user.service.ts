@@ -122,11 +122,24 @@ export class UserService {
       // Ensure branch belongs to the specified merchant
       if (
         createUserDto.merchantId &&
-        branch.merchant.id !== createUserDto.merchantId
+        branch.merchant?.id !== createUserDto.merchantId
       ) {
-        throw new ForbiddenException(
-          'Branch does not belong to the specified merchant',
-        );
+        // If merchant relationship is null, try to get it from the branch directly
+        if (!branch.merchant) {
+          const branchWithMerchant = await this.branchRepository.findOne({
+            where: { id: branch.id },
+            relations: ['merchant'],
+          });
+          if (branchWithMerchant?.merchant?.id !== createUserDto.merchantId) {
+            throw new ForbiddenException(
+              'Branch does not belong to the specified merchant',
+            );
+          }
+        } else {
+          throw new ForbiddenException(
+            'Branch does not belong to the specified merchant',
+          );
+        }
       }
     }
 

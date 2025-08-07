@@ -45,10 +45,11 @@ export async function POST(request: Request) {
 
     const order = await orderRes.json();
 
-    // Generate payment link
-    const paymentLink = `${
-      process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000"
-    }/payment/${order.id}`;
+    // Generate payment link using the request URL to get the correct host and port
+    const url = new URL(request.url);
+    const baseUrl =
+      process.env.NEXT_PUBLIC_FRONTEND_URL || `${url.protocol}//${url.host}`;
+    const paymentLink = `${baseUrl}/payment/${order.id}`;
 
     return NextResponse.json(
       {

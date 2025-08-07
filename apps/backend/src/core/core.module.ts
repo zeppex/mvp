@@ -16,17 +16,11 @@ import {
 import { PaymentOrderService } from './services/payment-order.service';
 import { PaymentOrder } from './entities/payment-order.entity';
 import { PaymentOrderController } from './controllers/payment-order.controller';
-import {
-  PublicPaymentOrderController,
-  SimplifiedPublicPaymentOrderController,
-  FullPublicPaymentOrderController,
-} from './controllers/public-payment-order.controller';
-import {
-  PublicPaymentController,
-  SimplifiedPublicPaymentController,
-} from './controllers/public-payment.controller';
+import { PublicPaymentOrderController } from './controllers/public-payment-order.controller';
+import { TreasuryController } from './controllers/treasury.controller';
 import { AuthModule } from '../auth/auth.module';
 import { QrCodeModule } from '../shared/qr-code.module';
+import { HederaModule } from '../hedera/hedera.module';
 
 @Module({
   imports: [
@@ -34,6 +28,7 @@ import { QrCodeModule } from '../shared/qr-code.module';
     BinanceClientModule,
     AuthModule,
     QrCodeModule,
+    HederaModule,
   ],
   providers: [MerchantService, BranchService, PosService, PaymentOrderService],
   controllers: [
@@ -43,10 +38,7 @@ import { QrCodeModule } from '../shared/qr-code.module';
     PosFullPathController,
     PaymentOrderController,
     PublicPaymentOrderController,
-    SimplifiedPublicPaymentOrderController,
-    FullPublicPaymentOrderController,
-    PublicPaymentController,
-    SimplifiedPublicPaymentController,
+    TreasuryController,
   ],
   exports: [MerchantService, BranchService, PosService, PaymentOrderService],
 })

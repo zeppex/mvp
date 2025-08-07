@@ -5,17 +5,18 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { userId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const response = await fetch(
-      `${BACKEND_URL}/api/v1/admin/users/${params.userId}`,
+      `${BACKEND_URL}/api/v1/admin/users/${userId}`,
       {
         headers: {
           Authorization: `Bearer ${session}`,
@@ -45,10 +46,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { userId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -57,7 +59,7 @@ export async function PUT(
     const body = await request.json();
 
     const response = await fetch(
-      `${BACKEND_URL}/api/v1/admin/users/${params.userId}`,
+      `${BACKEND_URL}/api/v1/admin/users/${userId}`,
       {
         method: "PUT",
         headers: {
@@ -89,17 +91,18 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const session = await cookies().get("session")?.value;
+    const { userId } = await params;
+    const session = (await cookies()).get("session")?.value;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const response = await fetch(
-      `${BACKEND_URL}/api/v1/admin/users/${params.userId}`,
+      `${BACKEND_URL}/api/v1/admin/users/${userId}`,
       {
         method: "DELETE",
         headers: {

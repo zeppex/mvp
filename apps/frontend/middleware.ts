@@ -27,9 +27,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const sessionCookie = request.cookies.get("session")?.value;
 
-  console.log("Middleware - Path:", path);
-  console.log("Middleware - Session cookie exists:", !!sessionCookie);
-
   const isPublicRoute =
     path === "/" ||
     path.startsWith("/payment-order") ||
@@ -38,9 +35,7 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute) {
     if (sessionCookie) {
-      console.log("Middleware - Auth route with session, verifying...");
       const session = await verifySession(sessionCookie);
-      console.log("Middleware - Session verification result:", session);
       if (session?.sub) {
         // Only superadmin should go to admin dashboard
         // admin, branch_admin, and cashier should go to merchant dashboard
@@ -48,7 +43,6 @@ export async function middleware(request: NextRequest) {
         const dashboardUrl = isSuperAdmin
           ? "/admin/dashboard"
           : "/merchant/dashboard";
-        console.log("Middleware - Redirecting to:", dashboardUrl);
         return NextResponse.redirect(new URL(dashboardUrl, request.url));
       }
     }

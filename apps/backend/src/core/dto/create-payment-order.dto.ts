@@ -7,8 +7,10 @@ import {
   Length,
   Matches,
   IsUUID,
+  IsObject,
 } from 'class-validator';
 import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
+import { ExchangeType } from '../entities/payment-order.entity';
 
 export class CreatePaymentOrderDto {
   @ApiProperty({
@@ -56,4 +58,43 @@ export class CreatePaymentOrderDto {
   })
   @IsOptional()
   status?: PaymentOrderStatus;
+
+  @ApiProperty({
+    example: ExchangeType.BINANCE,
+    enum: ExchangeType,
+    description: 'Exchange type for the payment',
+    required: false,
+  })
+  @IsEnum(ExchangeType, {
+    message: 'Exchange must be a valid exchange type',
+  })
+  @IsOptional()
+  exchange?: ExchangeType;
+
+  @ApiProperty({
+    example: { customerId: '12345', orderType: 'food' },
+    description: 'Additional metadata for the payment order',
+    required: false,
+  })
+  @IsObject({ message: 'Metadata must be an object' })
+  @IsOptional()
+  metadata?: Record<string, any>;
+
+  @ApiProperty({
+    example: 'ext_tx_123456789',
+    description: 'External transaction ID from the exchange',
+    required: false,
+  })
+  @IsString({ message: 'External transaction ID must be a string' })
+  @IsOptional()
+  externalTransactionId?: string;
+
+  @ApiProperty({
+    example: 'Payment failed due to insufficient funds',
+    description: 'Error message if payment failed',
+    required: false,
+  })
+  @IsString({ message: 'Error message must be a string' })
+  @IsOptional()
+  errorMessage?: string;
 }

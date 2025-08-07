@@ -458,7 +458,7 @@ export default function PosTerminalsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm" asChild>
                             <Link
-                              href={`/merchant/dashboard/pos-terminals/${pos.id}`}
+                              href={`/merchant/dashboard/branches/${pos.branchId}/pos/${pos.id}`}
                             >
                               <Edit className="h-4 w-4" />
                             </Link>

@@ -4,6 +4,7 @@ import {
   PrimaryColumn,
   BeforeInsert,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -33,7 +34,11 @@ export class Pos {
   @Column({ type: 'timestamp', nullable: true })
   deactivatedAt: Date;
 
+  @Column('uuid')
+  branchId: string;
+
   @ManyToOne(() => Branch, (branch) => branch.pos, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'branchId' })
   branch: Branch;
 
   @CreateDateColumn()

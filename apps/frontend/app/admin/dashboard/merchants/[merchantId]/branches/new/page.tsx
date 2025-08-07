@@ -96,8 +96,8 @@ export default function NewBranchPage() {
         description: `Branch "${data.name}" created successfully`,
       });
 
-      // Redirect back to merchant detail page
-      router.push(`/admin/dashboard/merchants/${merchantId}`);
+      // Redirect back to merchant detail page with refresh parameter
+      router.push(`/admin/dashboard/merchants/${merchantId}?refresh=true`);
     } catch (error) {
       console.error("Error creating branch:", error);
       toast({

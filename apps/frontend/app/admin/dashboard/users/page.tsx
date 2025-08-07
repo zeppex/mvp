@@ -119,9 +119,7 @@ export default function UsersPage() {
         onOpenChange={setIsModalOpen}
         merchants={merchantOptions}
         onUserAdded={() => {
-          // In a real app with a data fetching library like SWR or React Query,
-          // you would invalidate the user query here to refetch the list.
-          // For this demo, we'll just log to the console.
+
           console.log("User added! Refetching list...")
         }}
       />
