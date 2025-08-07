@@ -57,16 +57,16 @@ export async function GET(request: Request) {
       orders = await ordersRes.json();
     }
 
-    // Fetch transactions for the merchant
-    const transactionsRes = await fetch(`${BACKEND_URL}/api/v1/transactions`, {
+    // Fetch payment orders for the merchant (replacing transactions)
+    const paymentOrdersRes = await fetch(`${BACKEND_URL}/api/v1/orders`, {
       headers: {
         Authorization: `Bearer ${session}`,
       },
     });
 
-    let transactions = [];
-    if (transactionsRes.ok) {
-      transactions = await transactionsRes.json();
+    let paymentOrders = [];
+    if (paymentOrdersRes.ok) {
+      paymentOrders = await paymentOrdersRes.json();
     }
 
     // Calculate statistics
@@ -101,93 +101,97 @@ export async function GET(request: Request) {
       .filter((order: any) => order.status === "COMPLETED")
       .reduce((sum: number, order: any) => sum + parseFloat(order.amount), 0);
 
-    // Transaction statistics
-    let totalTransactions = transactions.length;
-    let completedTransactions = transactions.filter(
-      (tx: any) => tx.status === "COMPLETED"
+    // Payment order statistics (replacing transaction statistics)
+    let totalPaymentOrders = paymentOrders.length;
+    let completedPaymentOrders = paymentOrders.filter(
+      (order: any) => order.status === "COMPLETED"
     ).length;
-    let pendingTransactions = transactions.filter(
-      (tx: any) => tx.status === "PENDING"
+    let pendingPaymentOrders = paymentOrders.filter(
+      (order: any) =>
+        order.status === "ACTIVE" || order.status === "IN_PROGRESS"
     ).length;
-    let failedTransactions = transactions.filter(
-      (tx: any) => tx.status === "FAILED"
+    let failedPaymentOrders = paymentOrders.filter(
+      (order: any) => order.status === "CANCELLED" || order.status === "EXPIRED"
     ).length;
 
-    // Total volume
+    // Total volume from completed payment orders
     let totalVolume =
-      completedTransactions > 0
-        ? transactions
-            .filter((tx: any) => tx.status === "COMPLETED")
-            .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0)
+      completedPaymentOrders > 0
+        ? paymentOrders
+            .filter((order: any) => order.status === "COMPLETED")
+            .reduce(
+              (sum: number, order: any) => sum + parseFloat(order.amount),
+              0
+            )
         : 0;
 
-    // If no transactions, provide mock statistics for demonstration
-    if (totalTransactions === 0) {
-      totalTransactions = 5;
-      completedTransactions = 3;
-      pendingTransactions = 1;
-      failedTransactions = 1;
-      totalVolume = 105.74; // Sum of completed mock transactions
+    // If no payment orders, provide mock statistics for demonstration
+    if (totalPaymentOrders === 0) {
+      totalPaymentOrders = 5;
+      completedPaymentOrders = 3;
+      pendingPaymentOrders = 1;
+      failedPaymentOrders = 1;
+      totalVolume = 105.74; // Sum of completed mock payment orders
     }
 
-    // Recent transactions (last 5)
-    let recentTransactions = transactions
+    // Recent payment orders (last 10)
+    let recentPaymentOrders = paymentOrders
       .sort(
         (a: any, b: any) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
-      .slice(0, 5)
-      .map((tx: any) => ({
-        id: tx.id,
-        amount: parseFloat(tx.amount).toFixed(2),
-        status: tx.status,
-        description: tx.description,
-        date: tx.date,
-        exchange: tx.exchange,
+      .slice(0, 10)
+      .map((order: any) => ({
+        id: order.id,
+        amount: parseFloat(order.amount).toFixed(2),
+        status: order.status,
+        description: order.description,
+        date: order.createdAt,
+        exchange: order.exchange || "binance",
       }));
 
-    // If no transactions, provide mock data for demonstration
-    if (recentTransactions.length === 0) {
-      recentTransactions = [
+    // If no payment orders, provide mock data for demonstration
+    if (recentPaymentOrders.length === 0) {
+      recentPaymentOrders = [
         {
-          id: "tx-001",
+          id: "order-001",
           amount: "25.50",
           status: "COMPLETED",
           description: "Coffee and pastry purchase",
           date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          exchange: "Binance",
+          exchange: "binance",
         },
         {
-          id: "tx-002",
+          id: "order-002",
           amount: "12.99",
           status: "COMPLETED",
           description: "Lunch special",
           date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          exchange: "Binance",
+          exchange: "binance",
         },
         {
-          id: "tx-003",
+          id: "order-003",
           amount: "45.00",
-          status: "PENDING",
+          status: "ACTIVE",
           description: "Grocery items",
           date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          exchange: "Binance",
+          exchange: "binance",
         },
         {
-          id: "tx-004",
+          id: "order-004",
           amount: "8.75",
-          status: "FAILED",
+          status: "CANCELLED",
           description: "Failed payment attempt",
           date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-          exchange: "Binance",
+          exchange: "binance",
         },
         {
-          id: "tx-005",
+          id: "order-005",
           amount: "67.25",
           status: "COMPLETED",
           description: "Electronics purchase",
           date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          exchange: "Binance",
+          exchange: "binance",
         },
       ];
     }
@@ -218,13 +222,13 @@ export async function GET(request: Request) {
         todayCount: todayOrders.length,
       },
       transactions: {
-        total: totalTransactions,
-        completed: completedTransactions,
-        pending: pendingTransactions,
-        failed: failedTransactions,
+        total: totalPaymentOrders,
+        completed: completedPaymentOrders,
+        pending: pendingPaymentOrders,
+        failed: failedPaymentOrders,
         totalVolume: totalVolume.toFixed(2),
       },
-      recentTransactions,
+      recentTransactions: recentPaymentOrders,
       paymentMethods,
     });
   } catch (error) {

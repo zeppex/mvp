@@ -25,6 +25,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 import { TokenService } from '../../hedera/token.service';
+import { HederaService } from '../../hedera/hedera.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 import { IsNumber, IsOptional, IsString, Min, Length } from 'class-validator';
@@ -71,6 +72,7 @@ export class TreasuryController {
   constructor(
     private readonly branchService: BranchService,
     private readonly tokenService: TokenService,
+    private readonly hederaService: HederaService,
     @InjectRepository(Branch)
     private readonly branchRepository: Repository<Branch>,
   ) {}
@@ -327,5 +329,48 @@ export class TreasuryController {
       message: `Refreshed balances for ${updatedBranches.length} branches`,
       updatedBranches,
     };
+  }
+
+  @Get('treasury-account-info')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get treasury account information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Treasury account information retrieved successfully',
+  })
+  async getTreasuryAccountInfo() {
+    try {
+      const client = this.hederaService.getClient();
+      const treasuryAccountId = this.hederaService.getTreasuryAccountId();
+      const tokenId = this.hederaService.getZeppexTokenId();
+
+      // Get account balance
+      const accountBalance =
+        await this.hederaService.getAccountBalance(treasuryAccountId);
+
+      // Get token balance (raw number)
+      const tokenBalanceRaw = await this.hederaService.getTokenBalance(
+        treasuryAccountId,
+        tokenId,
+      );
+
+      // Convert token balance to human-readable format (6 decimals)
+      const tokenBalanceHuman = (tokenBalanceRaw / Math.pow(10, 6)).toString();
+
+      return {
+        accountId: treasuryAccountId.toString(),
+        publicKey: this.hederaService
+          .getTreasuryPrivateKey()
+          .publicKey.toString(),
+        hbarBalance: accountBalance.hbars.toString(),
+        tokenBalance: tokenBalanceHuman,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get treasury account info: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

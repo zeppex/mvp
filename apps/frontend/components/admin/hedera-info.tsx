@@ -45,18 +45,18 @@ interface HederaData {
 // Fallback data if API fails
 const FALLBACK_DATA: HederaData = {
   token: {
-    tokenId: "0.0.6504141",
+    tokenId: "0.0.6513627",
     name: "Zeppex Token",
     symbol: "ZEPPEX",
     decimals: 6,
-    totalSupply: "1000000000",
-    treasuryAccountId: "0.0.123456",
+    totalSupply: "15241.772980",
+    treasuryAccountId: "0.0.6466583",
   },
   account: {
-    accountId: "0.0.123456",
+    accountId: "0.0.6466583",
     publicKey: "302a300506032b6570032100...",
     hbarBalance: "1000.0",
-    tokenBalance: "500000000",
+    tokenBalance: "0", // Treasury doesn't hold any tokens - they're distributed to branches
   },
   network: "testnet",
 };
@@ -246,11 +246,7 @@ export default function HederaInfo() {
               </label>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-mono bg-muted px-2 py-1 rounded flex-1">
-                  {formatBalance(
-                    hederaData.token.totalSupply,
-                    hederaData.token.decimals
-                  )}{" "}
-                  {hederaData.token.symbol}
+                  {hederaData.token.totalSupply} {hederaData.token.symbol}
                 </p>
               </div>
             </div>
@@ -368,11 +364,7 @@ export default function HederaInfo() {
               </label>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-mono bg-muted px-2 py-1 rounded flex-1">
-                  {formatBalance(
-                    hederaData.account.tokenBalance,
-                    hederaData.token.decimals
-                  )}{" "}
-                  {hederaData.token.symbol}
+                  {hederaData.account.tokenBalance} {hederaData.token.symbol}
                 </p>
               </div>
             </div>
