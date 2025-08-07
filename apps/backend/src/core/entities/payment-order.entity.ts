@@ -12,6 +12,13 @@ import { Branch } from './branch.entity';
 import { Pos } from './pos.entity';
 import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
 
+export enum ExchangeType {
+  BINANCE = 'binance',
+  COINBASE = 'coinbase',
+  KRAKEN = 'kraken',
+  // Add more exchanges as needed
+}
+
 @Entity('payment_orders')
 export class PaymentOrder {
   @PrimaryGeneratedColumn('uuid')
@@ -29,6 +36,22 @@ export class PaymentOrder {
     default: PaymentOrderStatus.ACTIVE,
   })
   status: PaymentOrderStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ExchangeType,
+    default: ExchangeType.BINANCE,
+  })
+  exchange: ExchangeType;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any>;
+
+  @Column({ type: 'text', nullable: true })
+  externalTransactionId: string;
+
+  @Column({ type: 'text', nullable: true })
+  errorMessage: string;
 
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date;

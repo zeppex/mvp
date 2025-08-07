@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { PaymentOrder } from '../entities/payment-order.entity';
+import { PaymentOrder, ExchangeType } from '../entities/payment-order.entity';
 import { CreatePaymentOrderDto, UpdatePaymentOrderDto } from '../dto';
 import { BranchService } from './branch.service';
 import { PosService } from './pos.service';
@@ -59,6 +59,10 @@ export class PaymentOrderService {
 
     // Mint Zeppex tokens to the branch based on payment amount
     try {
+      if (!order.branch) {
+        throw new Error(`Branch not found for payment order ${order.id}`);
+      }
+
       const tokenAmount = this.calculateTokenAmount(order.amount);
       await this.branchService.mintTokensToBranch(
         order.branch.id,
@@ -81,10 +85,10 @@ export class PaymentOrderService {
 
   // Helper: calculate token amount based on payment amount
   private calculateTokenAmount(paymentAmount: string): number {
-    // Convert payment amount to tokens (1:1 ratio for now, can be adjusted)
-    // Assuming payment amount is in cents, convert to tokens
-    const amountInCents = parseFloat(paymentAmount);
-    return Math.floor(amountInCents / 100); // 1 token per dollar
+    // Convert payment amount to tokens with 6 decimals
+    // 1 dollar = 1,000,000 token units (6 decimals)
+    const amountInDollars = parseFloat(paymentAmount);
+    return Math.floor(amountInDollars * 1000000); // 1:1 ratio with 6 decimals
   }
 
   async create(
@@ -105,6 +109,10 @@ export class PaymentOrderService {
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
+    order.exchange = createDto.exchange || ExchangeType.BINANCE;
+    order.metadata = createDto.metadata;
+    order.externalTransactionId = createDto.externalTransactionId;
+    order.errorMessage = createDto.errorMessage;
     order.branch = { id: branchId } as any;
     order.pos = { id: posId } as any;
     if (activeOrder) {
@@ -137,6 +145,10 @@ export class PaymentOrderService {
     const order = new PaymentOrder();
     order.amount = createDto.amount;
     order.description = createDto.description;
+    order.exchange = createDto.exchange || ExchangeType.BINANCE;
+    order.metadata = createDto.metadata;
+    order.externalTransactionId = createDto.externalTransactionId;
+    order.errorMessage = createDto.errorMessage;
 
     // Handle case where pos.branch might be null due to merchant relationship issues
     if (!pos.branch || !pos.branch.id) {
@@ -197,7 +209,7 @@ export class PaymentOrderService {
         pos: { branch: { merchant: { id: merchantId } } },
         ...(includeDeactivated ? {} : { deactivatedAt: null }),
       },
-      relations: ['pos', 'pos.branch'],
+      relations: ['pos', 'pos.branch', 'branch'],
     });
 
     // If no orders found with merchant filter, try without it (for superadmin)
@@ -206,7 +218,7 @@ export class PaymentOrderService {
         where: {
           ...(includeDeactivated ? {} : { deactivatedAt: null }),
         },
-        relations: ['pos', 'pos.branch'],
+        relations: ['pos', 'pos.branch', 'branch'],
       });
     }
 
@@ -226,7 +238,7 @@ export class PaymentOrderService {
         id,
         pos: { id: posId },
       },
-      relations: ['pos'],
+      relations: ['pos', 'branch'],
     });
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
     return order;
@@ -235,7 +247,7 @@ export class PaymentOrderService {
   async findOneById(id: UUID): Promise<PaymentOrder> {
     const order = await this.orderRepository.findOne({
       where: { id },
-      relations: ['pos', 'pos.branch'],
+      relations: ['pos', 'pos.branch', 'branch'],
     });
 
     if (!order) throw new NotFoundException(`PaymentOrder ${id} not found`);
@@ -248,14 +260,14 @@ export class PaymentOrderService {
         id,
         pos: { branch: { merchant: { id: merchantId } } },
       },
-      relations: ['pos', 'pos.branch'],
+      relations: ['pos', 'pos.branch', 'branch'],
     });
 
     // If order not found with merchant filter, try without it (for superadmin)
     if (!order) {
       order = await this.orderRepository.findOne({
         where: { id },
-        relations: ['pos', 'pos.branch'],
+        relations: ['pos', 'pos.branch', 'branch'],
       });
     }
 

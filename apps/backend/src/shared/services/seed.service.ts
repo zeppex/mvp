@@ -8,10 +8,10 @@ import { BranchService } from '../../core/services/branch.service';
 import { CreateBranchDto } from '../../core/dto/create-branch.dto';
 import { PosService } from '../../core/services/pos.service';
 import { CreatePosDto } from '../../core/dto/create-pos.dto';
-import { TransactionService } from '../../transactions/transaction.service';
-import { CreateTransactionDto } from '../../transactions/dto/create-transaction.dto';
-import { TransactionStatus } from '../../transactions/transaction.entity';
-import { ExchangeType } from '../../transactions/transaction.entity';
+import { PaymentOrderService } from '../../core/services/payment-order.service';
+import { CreatePaymentOrderDto } from '../../core/dto/create-payment-order.dto';
+import { PaymentOrderStatus } from '../../shared/enums/payment-order-status.enum';
+import { ExchangeType } from '../../core/entities/payment-order.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -22,7 +22,7 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly merchantService: MerchantService,
     private readonly branchService: BranchService,
     private readonly posService: PosService,
-    private readonly transactionService: TransactionService,
+    private readonly paymentOrderService: PaymentOrderService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -189,137 +189,142 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   /**
-   * Creates sample transactions for testing purposes
+   * Creates sample payment orders for testing purposes
    */
   async createSampleTransactions(
     merchantId: string,
     branchId: string,
     posId: string,
   ) {
-    this.logger.log('Creating sample transactions...');
+    this.logger.log('Creating sample payment orders...');
 
     try {
-      // Create sample transactions with different statuses
-      const sampleTransactions: CreateTransactionDto[] = [
+      // Create sample payment orders with different statuses
+      const samplePaymentOrders: CreatePaymentOrderDto[] = [
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '25.50',
           exchange: ExchangeType.BINANCE,
           description: 'Coffee and pastry purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '12.99',
           exchange: ExchangeType.BINANCE,
           description: 'Lunch special',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '45.00',
           exchange: ExchangeType.BINANCE,
           description: 'Grocery items',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '8.75',
           exchange: ExchangeType.BINANCE,
           description: 'Snack purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '67.25',
           exchange: ExchangeType.BINANCE,
           description: 'Electronics purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '33.99',
           exchange: ExchangeType.BINANCE,
           description: 'Clothing purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '19.50',
           exchange: ExchangeType.BINANCE,
           description: 'Book purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.COMPLETED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '89.99',
           exchange: ExchangeType.BINANCE,
           description: 'Home goods purchase',
+          status: PaymentOrderStatus.COMPLETED,
         },
         {
-          status: TransactionStatus.PENDING,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '55.00',
           exchange: ExchangeType.BINANCE,
           description: 'Pending payment',
+          status: PaymentOrderStatus.PENDING,
         },
         {
-          status: TransactionStatus.FAILED,
-          merchantId: merchantId,
-          branchId: branchId,
           posId: posId,
           amount: '15.75',
           exchange: ExchangeType.BINANCE,
           description: 'Failed payment attempt',
+          status: PaymentOrderStatus.CANCELLED,
+          errorMessage: 'Payment failed due to insufficient funds',
         },
       ];
 
-      for (const transactionData of sampleTransactions) {
+      for (const paymentOrderData of samplePaymentOrders) {
         try {
-          if (transactionData.status === TransactionStatus.COMPLETED) {
-            // Use the new createCompleted method for completed transactions
-            const transaction =
-              await this.transactionService.createCompleted(transactionData);
+          if (paymentOrderData.status === PaymentOrderStatus.COMPLETED) {
+            // Create completed payment order
+            const paymentOrder =
+              await this.paymentOrderService.createByMerchant(
+                merchantId,
+                posId,
+                paymentOrderData,
+              );
+            // Update to completed status
+            await this.paymentOrderService.updateOrderStatus(
+              merchantId,
+              paymentOrder.id,
+              PaymentOrderStatus.COMPLETED,
+            );
             this.logger.log(
-              `Sample completed transaction created and tokens minted: ${transaction.id} - ${transaction.description}`,
+              `Sample completed payment order created and tokens minted: ${paymentOrder.id} - ${paymentOrder.description}`,
             );
           } else {
-            // Create transaction with intended status
-            const transaction =
-              await this.transactionService.create(transactionData);
+            // Create payment order with intended status
+            const paymentOrder =
+              await this.paymentOrderService.createByMerchant(
+                merchantId,
+                posId,
+                paymentOrderData,
+              );
+            if (paymentOrderData.status !== PaymentOrderStatus.ACTIVE) {
+              await this.paymentOrderService.updateOrderStatus(
+                merchantId,
+                paymentOrder.id,
+                paymentOrderData.status,
+              );
+            }
             this.logger.log(
-              `Sample transaction created: ${transaction.id} - ${transaction.description} (${transactionData.status})`,
+              `Sample payment order created: ${paymentOrder.id} - ${paymentOrder.description} (${paymentOrderData.status})`,
             );
           }
         } catch (error) {
           this.logger.error(
-            `Failed to create sample transaction: ${error.message}`,
+            `Failed to create sample payment order: ${error.message}`,
           );
         }
       }
 
-      this.logger.log('Sample transactions creation completed');
+      this.logger.log('Sample payment orders creation completed');
     } catch (error) {
-      this.logger.error('Failed to create sample transactions:', error.message);
+      this.logger.error(
+        'Failed to create sample payment orders:',
+        error.message,
+      );
     }
   }
 }

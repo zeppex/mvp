@@ -36,165 +36,95 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface Transaction {
+interface PaymentOrder {
   id: string;
-  date: string;
-  description: string;
   amount: string;
-  status: string;
-  exchange: string;
-  merchantId: string;
+  description: string;
+  status:
+    | "PENDING"
+    | "ACTIVE"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED"
+    | "EXPIRED"
+    | "QUEUED";
+  exchange: "binance" | "coinbase" | "kraken";
   branchId: string;
   posId: string;
-  paymentOrderId?: string;
-  userId?: string;
   metadata?: any;
   externalTransactionId?: string;
   errorMessage?: string;
+  expiresAt?: string;
+  deactivatedAt?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
+  pos?: {
+    id: string;
+    name: string;
+  };
+  branch?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showRefundDialog, setShowRefundDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+  const [selectedPaymentOrder, setSelectedPaymentOrder] =
+    useState<PaymentOrder | null>(null);
   const [refundAmount, setRefundAmount] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const response = await fetch("/api/merchant/transactions");
-        if (!response.ok) {
-          throw new Error("Failed to fetch transactions");
-        }
-        const data = await response.json();
+  const fetchPaymentOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // If no transactions from API, use mock data for demonstration
-        if (data.length === 0) {
-          const mockTransactions: Transaction[] = [
-            {
-              id: "tx-001",
-              date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-              description: "Coffee and pastry purchase",
-              amount: "25.50",
-              status: "completed",
-              exchange: "Binance",
-              merchantId: "merchant-001",
-              branchId: "branch-001",
-              posId: "pos-001",
-              createdAt: new Date(
-                Date.now() - 2 * 60 * 60 * 1000
-              ).toISOString(),
-              updatedAt: new Date(
-                Date.now() - 2 * 60 * 60 * 1000
-              ).toISOString(),
-            },
-            {
-              id: "tx-002",
-              date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-              description: "Lunch special",
-              amount: "12.99",
-              status: "completed",
-              exchange: "Binance",
-              merchantId: "merchant-001",
-              branchId: "branch-001",
-              posId: "pos-001",
-              createdAt: new Date(
-                Date.now() - 4 * 60 * 60 * 1000
-              ).toISOString(),
-              updatedAt: new Date(
-                Date.now() - 4 * 60 * 60 * 1000
-              ).toISOString(),
-            },
-            {
-              id: "tx-003",
-              date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-              description: "Grocery items",
-              amount: "45.00",
-              status: "pending",
-              exchange: "Binance",
-              merchantId: "merchant-001",
-              branchId: "branch-001",
-              posId: "pos-001",
-              createdAt: new Date(
-                Date.now() - 6 * 60 * 60 * 1000
-              ).toISOString(),
-              updatedAt: new Date(
-                Date.now() - 6 * 60 * 60 * 1000
-              ).toISOString(),
-            },
-            {
-              id: "tx-004",
-              date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
-              description: "Failed payment attempt",
-              amount: "8.75",
-              status: "failed",
-              exchange: "Binance",
-              merchantId: "merchant-001",
-              branchId: "branch-001",
-              posId: "pos-001",
-              createdAt: new Date(
-                Date.now() - 8 * 60 * 60 * 1000
-              ).toISOString(),
-              updatedAt: new Date(
-                Date.now() - 8 * 60 * 60 * 1000
-              ).toISOString(),
-            },
-            {
-              id: "tx-005",
-              date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-              description: "Electronics purchase",
-              amount: "67.25",
-              status: "completed",
-              exchange: "Binance",
-              merchantId: "merchant-001",
-              branchId: "branch-001",
-              posId: "pos-001",
-              createdAt: new Date(
-                Date.now() - 24 * 60 * 60 * 1000
-              ).toISOString(),
-              updatedAt: new Date(
-                Date.now() - 24 * 60 * 60 * 1000
-              ).toISOString(),
-            },
-          ];
-          setTransactions(mockTransactions);
-        } else {
-          setTransactions(data);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
+      const response = await fetch("/api/merchant/payment-orders");
+      if (!response.ok) {
+        throw new Error("Failed to fetch payment orders");
       }
-    };
+      const data = await response.json();
+      setPaymentOrders(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchTransactions();
+  useEffect(() => {
+    fetchPaymentOrders();
   }, []);
 
-  const filteredTransactions = transactions.filter((transaction) => {
+  const filteredPaymentOrders = paymentOrders.filter((paymentOrder) => {
     // Apply search filter
     const matchesSearch =
-      transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase());
+      paymentOrder.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      paymentOrder.description
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (paymentOrder.externalTransactionId &&
+        paymentOrder.externalTransactionId
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
 
     // Apply status filter
     const matchesStatus =
       statusFilter === "all" ||
-      transaction.status.toLowerCase() === statusFilter;
+      paymentOrder.status.toLowerCase() === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  const handleRefund = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setRefundAmount(transaction.amount);
+  const handleRefund = (paymentOrder: PaymentOrder) => {
+    setSelectedPaymentOrder(paymentOrder);
+    setRefundAmount(paymentOrder.amount);
     setShowRefundDialog(true);
   };
 
@@ -210,11 +140,14 @@ export default function TransactionsPage() {
       case "completed":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case "pending":
+      case "queued":
         return <Clock className="h-4 w-4 text-amber-500" />;
-      case "failed":
+      case "active":
+      case "in_progress":
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      case "cancelled":
+      case "expired":
         return <XCircle className="h-4 w-4 text-red-500" />;
-      case "refunded":
-        return <ArrowDownIcon className="h-4 w-4 text-blue-500" />;
       default:
         return null;
     }
@@ -225,13 +158,19 @@ export default function TransactionsPage() {
     return date.toLocaleString();
   };
 
+  const formatExchange = (exchange: string) => {
+    return exchange.charAt(0).toUpperCase() + exchange.slice(1);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
-            <p className="text-muted-foreground">Loading transactions...</p>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Payment Orders
+            </h2>
+            <p className="text-muted-foreground">Loading payment orders...</p>
           </div>
         </div>
         <Card>
@@ -258,15 +197,19 @@ export default function TransactionsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
-            <p className="text-muted-foreground">Error loading transactions</p>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Payment Orders
+            </h2>
+            <p className="text-muted-foreground">
+              Error loading payment orders
+            </p>
           </div>
         </div>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error}</p>
-              <Button onClick={() => window.location.reload()}>Retry</Button>
+              <Button onClick={fetchPaymentOrders}>Retry</Button>
             </div>
           </CardContent>
         </Card>
@@ -278,13 +221,13 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Payment Orders</h2>
           <p className="text-muted-foreground">
-            View and manage your payment transactions
+            View and manage your payment orders
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.location.reload()}>
+          <Button variant="outline" onClick={fetchPaymentOrders}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
@@ -297,9 +240,9 @@ export default function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+          <CardTitle>Payment Order History</CardTitle>
           <CardDescription>
-            View all your transactions and their statuses
+            View all your payment orders and their statuses
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -307,7 +250,7 @@ export default function TransactionsPage() {
             <div className="relative w-full md:w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search transactions..."
+                placeholder="Search payment orders..."
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -324,8 +267,12 @@ export default function TransactionsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="queued">Queued</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -335,7 +282,7 @@ export default function TransactionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Order ID</TableHead>
                   <TableHead>Date & Time</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Amount</TableHead>
@@ -345,32 +292,40 @@ export default function TransactionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.length === 0 ? (
+                {filteredPaymentOrders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-4">
-                      No transactions found
+                      {paymentOrders.length === 0
+                        ? "No payment orders found"
+                        : "No payment orders match your filters"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                  filteredPaymentOrders.map((paymentOrder) => (
+                    <TableRow key={paymentOrder.id}>
                       <TableCell className="font-medium">
-                        {transaction.id}
+                        {paymentOrder.id}
                       </TableCell>
-                      <TableCell>{formatDate(transaction.date)}</TableCell>
-                      <TableCell>{transaction.description}</TableCell>
                       <TableCell>
-                        ${parseFloat(transaction.amount).toFixed(2)}
+                        {formatDate(paymentOrder.createdAt)}
+                      </TableCell>
+                      <TableCell>{paymentOrder.description}</TableCell>
+                      <TableCell>
+                        ${parseFloat(paymentOrder.amount).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(transaction.status)}
+                          {getStatusIcon(paymentOrder.status)}
                           <span className="capitalize">
-                            {transaction.status.toLowerCase()}
+                            {paymentOrder.status
+                              .toLowerCase()
+                              .replace("_", " ")}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{transaction.exchange}</TableCell>
+                      <TableCell>
+                        {formatExchange(paymentOrder.exchange)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -383,16 +338,27 @@ export default function TransactionsPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() =>
-                                navigator.clipboard.writeText(transaction.id)
+                                navigator.clipboard.writeText(paymentOrder.id)
                               }
                             >
-                              Copy transaction ID
+                              Copy order ID
                             </DropdownMenuItem>
+                            {paymentOrder.externalTransactionId && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigator.clipboard.writeText(
+                                    paymentOrder.externalTransactionId!
+                                  )
+                                }
+                              >
+                                Copy external ID
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
-                            {transaction.status.toLowerCase() ===
+                            {paymentOrder.status.toLowerCase() ===
                               "completed" && (
                               <DropdownMenuItem
-                                onClick={() => handleRefund(transaction)}
+                                onClick={() => handleRefund(paymentOrder)}
                               >
                                 Process refund
                               </DropdownMenuItem>
@@ -415,8 +381,8 @@ export default function TransactionsPage() {
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
             <DialogDescription>
-              Are you sure you want to process a refund for transaction{" "}
-              {selectedTransaction?.id}?
+              Are you sure you want to process a refund for payment order{" "}
+              {selectedPaymentOrder?.id}?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -429,7 +395,7 @@ export default function TransactionsPage() {
                 onChange={(e) => setRefundAmount(e.target.value)}
                 step="0.01"
                 min="0.01"
-                max={selectedTransaction?.amount}
+                max={selectedPaymentOrder?.amount}
               />
             </div>
           </div>
