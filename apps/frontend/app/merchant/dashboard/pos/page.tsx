@@ -119,7 +119,6 @@ export default function PointOfSale() {
       }
 
       const order = await response.json();
-      console.log("Payment order created:", order);
       setCurrentOrder(order);
       setShowQRCode(true);
     } catch (err) {
@@ -328,7 +327,6 @@ export default function PointOfSale() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center p-6">
-            {console.log("Current order:", currentOrder)}
             {currentOrder?.paymentLink ? (
               <>
                 <div className="bg-white p-4 rounded-lg">

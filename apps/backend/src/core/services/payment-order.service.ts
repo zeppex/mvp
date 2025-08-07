@@ -451,8 +451,6 @@ export class PaymentOrderService {
       relations: ['pos'],
     });
 
-    console.log('order found', order);
-
     if (order && order.isExpired()) {
       order.status = PaymentOrderStatus.EXPIRED;
       await this.orderRepository.save(order);

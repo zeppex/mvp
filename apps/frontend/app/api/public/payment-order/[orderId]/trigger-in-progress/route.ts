@@ -11,12 +11,6 @@ export async function POST(
     const url = `${BACKEND_URL}/api/v1/public/payment-order/${orderId}/trigger-in-progress`;
 
     const apiKey = process.env.PAYMENT_API_KEY || "test-payment-api-key-12345";
-    console.log("=== Payment Processing Debug ===");
-    console.log("Order ID:", orderId);
-    console.log("Backend URL:", BACKEND_URL);
-    console.log("Payment API Key configured:", !!process.env.PAYMENT_API_KEY);
-    console.log("API Key value:", apiKey.substring(0, 10) + "...");
-    console.log("Making request to:", url);
 
     const apiRes = await fetch(url, {
       method: "POST",

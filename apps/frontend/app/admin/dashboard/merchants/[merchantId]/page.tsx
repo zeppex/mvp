@@ -71,7 +71,6 @@ export default function MerchantDetailPage() {
           throw new Error("Failed to fetch merchant");
         }
         const data = await response.json();
-        console.log("Merchant data received:", data);
         setMerchant(data);
 
         // If this was a refresh request, clean up the URL
