@@ -170,10 +170,8 @@ export class PublicPaymentOrderController {
     @Param('orderId', new ParseUUIDPipe()) orderId: UUID,
     @Headers('x-api-key') apiKey: string,
   ): Promise<any> {
-    // Validate API key
-    if (!apiKey || apiKey !== 'test-payment-api-key-12345') {
-      throw new ForbiddenException('Invalid API key');
-    }
+    // API key validation is handled by the ApiKeyGuard
+    // The guard will throw UnauthorizedException if the key is invalid
 
     try {
       // Get the payment order
@@ -202,7 +200,7 @@ export class PublicPaymentOrderController {
       const updatedOrder = await this.paymentOrderService.updateOrderStatus(
         merchantId,
         orderId,
-        PaymentOrderStatus.IN_PROGRESS,
+        PaymentOrderStatus.COMPLETED,
       );
 
       return {

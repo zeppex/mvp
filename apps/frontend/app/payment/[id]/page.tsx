@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ export default function PaymentPage({
     const fetchPaymentOrder = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear any previous errors
         // The id parameter is actually a POS ID, so we need to get the current payment order for that POS
         const response = await fetch(
           `/api/public/payment-order/pos/${id}/current`
@@ -90,16 +91,45 @@ export default function PaymentPage({
     }
   }, [id]);
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (!selectedExchange || !paymentOrder) return;
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Trigger payment processing in the backend
+      const response = await fetch(
+        `/api/public/payment-order/${paymentOrder.id}/trigger-in-progress`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Payment processing failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+        throw new Error(errorData.message || "Payment processing failed");
+      }
+
+      const result = await response.json();
+
+      // Payment was successfully triggered
       setIsProcessing(false);
       setIsComplete(true);
-    }, 2000);
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      setError(
+        error instanceof Error ? error.message : "Payment processing failed"
+      );
+      setIsProcessing(false);
+    }
   };
 
   if (loading) {
@@ -246,7 +276,10 @@ export default function PaymentPage({
             </label>
             <Select
               value={selectedExchange}
-              onValueChange={setSelectedExchange}
+              onValueChange={(value) => {
+                setSelectedExchange(value);
+                setError(null); // Clear error when user selects a new exchange
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose an exchange" />
@@ -273,6 +306,15 @@ export default function PaymentPage({
               </SelectContent>
             </Select>
           </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
           <Button
@@ -293,4 +335,3 @@ export default function PaymentPage({
     </div>
   );
 }
-
