@@ -76,9 +76,6 @@ export class PaymentOrder {
   @JoinColumn({ name: 'posId' })
   pos: Pos;
 
-  @OneToMany('Transaction', (tx: any) => tx.paymentOrder)
-  transactions: any[];
-
   @CreateDateColumn()
   createdAt: Date;
 

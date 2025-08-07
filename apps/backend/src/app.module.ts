@@ -11,7 +11,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CoreModule } from './core/core.module';
 import { PaymentOrderModule } from './core/payment-order.module';
-import { TransactionModule } from './transactions/transaction.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
@@ -96,7 +95,6 @@ import * as Joi from 'joi';
     AuthModule,
     CoreModule,
     PaymentOrderModule,
-    TransactionModule,
     HealthModule,
     HederaModule,
   ],

@@ -6,6 +6,188 @@ A comprehensive payment processing platform built with a modern monorepo archite
 
 This monorepo contains both the frontend and backend applications for the Zeppex MVP project, organized using **Turborepo** and **pnpm workspaces** for efficient development and deployment.
 
+### 🏛️ System Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        NextJS[Next.js Frontend<br/>Port 3000]
+        Admin[Admin Dashboard]
+        Merchant[Merchant Dashboard]
+        Payment[Payment Interface]
+    end
+
+    subgraph "Backend Layer"
+        NestJS[NestJS Backend<br/>Port 8080]
+        Auth[Authentication<br/>JWT, Guards]
+        Core[Core Business Logic<br/>Merchants, Payments]
+        Hedera[Hedera Integration<br/>Token Management]
+        Binance[Binance Pay<br/>Integration]
+    end
+
+    subgraph "Database Layer"
+        PostgreSQL[(PostgreSQL<br/>Port 5432)]
+    end
+
+    subgraph "Blockchain Layer"
+        HederaNetwork[Hedera Network<br/>Testnet/Mainnet]
+    end
+
+    subgraph "External Services"
+        BinanceAPI[Binance API]
+    end
+
+    NextJS --> NestJS
+    Admin --> NestJS
+    Merchant --> NestJS
+    Payment --> NestJS
+    
+    NestJS --> PostgreSQL
+    NestJS --> HederaNetwork
+    NestJS --> BinanceAPI
+    
+    Hedera --> HederaNetwork
+    Binance --> BinanceAPI
+```
+
+### 🔄 Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant DB as PostgreSQL
+    participant H as Hedera
+    participant BP as Binance Pay
+
+    U->>F: Access Dashboard
+    F->>B: Authenticate User
+    B->>DB: Validate Credentials
+    DB-->>B: User Data
+    B-->>F: JWT Token
+    F-->>U: Dashboard Access
+
+    U->>F: Create Payment Order
+    F->>B: POST /payment-orders
+    B->>DB: Store Order
+    B->>H: Mint Tokens
+    H-->>B: Token ID
+    B->>BP: Generate QR Code
+    BP-->>B: QR Code Data
+    B-->>F: Payment Order + QR
+    F-->>U: Display QR Code
+
+    U->>F: Check Payment Status
+    F->>B: GET /payment-orders/:id
+    B->>BP: Check Payment Status
+    BP-->>B: Payment Status
+    B->>DB: Update Order Status
+    B-->>F: Updated Status
+    F-->>U: Status Display
+```
+
+### 🐳 Docker Architecture
+
+```mermaid
+graph TB
+    subgraph "Docker Compose Services"
+        subgraph "Frontend Container"
+            NextJS[Next.js App<br/>Node.js 20]
+            NextJS --> |Static Assets| Nginx[Nginx<br/>Port 3000]
+        end
+
+        subgraph "Backend Container"
+            NestJS[NestJS App<br/>Node.js 20]
+            NestJS --> |API| Express[Express Server<br/>Port 8080]
+        end
+
+        subgraph "Database Container"
+            PostgreSQL[(PostgreSQL 15<br/>Port 5432)]
+            PGDATA[(/var/lib/postgresql/data)]
+        end
+
+        subgraph "Network"
+            FrontendNet[frontend-network]
+            BackendNet[backend-network]
+            DatabaseNet[database-network]
+        end
+    end
+
+    subgraph "External Services"
+        HederaNetwork[Hedera Network]
+        BinanceAPI[Binance API]
+    end
+
+    Nginx --> FrontendNet
+    Express --> BackendNet
+    PostgreSQL --> DatabaseNet
+    
+    FrontendNet --> BackendNet
+    BackendNet --> DatabaseNet
+    BackendNet --> HederaNetwork
+    BackendNet --> BinanceAPI
+```
+
+### 🏢 Multi-Tenant Architecture
+
+```mermaid
+graph LR
+    subgraph "Super Admin"
+        SA[Super Admin<br/>Full Access]
+    end
+
+    subgraph "Merchant 1"
+        M1[Merchant Admin]
+        B1[Branch 1]
+        B2[Branch 2]
+        P1[POS Terminal 1]
+        P2[POS Terminal 2]
+        U1[Cashier 1]
+        U2[Cashier 2]
+    end
+
+    subgraph "Merchant 2"
+        M2[Merchant Admin]
+        B3[Branch 1]
+        P3[POS Terminal 1]
+        U3[Cashier 1]
+    end
+
+    subgraph "Database Schema"
+        DB1[(Merchants Table)]
+        DB2[(Branches Table)]
+        DB3[(Users Table)]
+        DB4[(Payment Orders Table)]
+    end
+
+    SA --> M1
+    SA --> M2
+    
+    M1 --> B1
+    M1 --> B2
+    B1 --> P1
+    B1 --> P2
+    B2 --> U1
+    B2 --> U2
+    
+    M2 --> B3
+    B3 --> P3
+    B3 --> U3
+    
+    M1 --> DB1
+    M2 --> DB1
+    B1 --> DB2
+    B2 --> DB2
+    B3 --> DB2
+    U1 --> DB3
+    U2 --> DB3
+    U3 --> DB3
+    P1 --> DB4
+    P2 --> DB4
+    P3 --> DB4
+```
+
 ### 📁 Project Structure
 
 ```

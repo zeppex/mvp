@@ -14,11 +14,12 @@ export class TokenInitService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const shouldDeployToken = this.configService.get<boolean>(
+    const deployTokenValue = this.configService.get<string>(
       'DEPLOY_ZEPPEX_TOKEN',
-      false,
     );
-
+    const shouldDeployToken = deployTokenValue === 'true';
+    this.logger.log('DEPLOY_ZEPPEX_TOKEN value:', deployTokenValue);
+    this.logger.log('shouldDeployToken', shouldDeployToken);
     if (!shouldDeployToken) {
       this.logger.log(
         'Skipping Zeppex token deployment (DEPLOY_ZEPPEX_TOKEN=false)',
